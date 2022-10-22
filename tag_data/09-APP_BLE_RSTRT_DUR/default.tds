@@ -1,0 +1,3 @@
+00 00 00 00	# disable multiple scans
+#64 00 00 00	# 1s
+#b8 0b 00 00	# 30s
