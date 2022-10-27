@@ -1,5 +1,6 @@
 include ../../user/common.mk
 
+BOARD=m2202
 DEBUG := 1
 
 DRIVERS := interrupt sw_timer timer atm_pm

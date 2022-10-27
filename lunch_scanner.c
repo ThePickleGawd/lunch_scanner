@@ -18,9 +18,6 @@
 #include "atm_scan_param.h"
 #include "atm_asm.h"
 #include "co_utils.h"
-#ifdef AUTO_TEST
-#include "uart_stdout.h"
-#endif // AUTO_TEST
 #include "nvds.h"
 #include "nvds_tag.h"
 #include "atm_pm.h"
@@ -54,9 +51,18 @@ static uint8_t activity_idx = ATM_INVALID_SCANIDX;
 static uint32_t restart_time_csec; // centi-seconds
 static sw_timer_id_t tid_restart;
 
-#if PLF_DEBUG
 static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)
 {
+    // Quick filtering for Atmosic Device
+    uint8_t target[3] = {0x7C, 0x69, 0x6B};
+    bool pass_filter = true;
+
+    for(int i = 0; i < 3; i++) {
+        if (param->trans_addr.addr.addr[i] != target[i]) pass_filter = false;
+    }
+
+    if(!pass_filter) return;
+
     printf("RSSI %4d ", param->rssi);
     printf("phy %u/%u ", param->phy_prim, param->phy_second);
 
@@ -109,7 +115,6 @@ static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)
 	putchar('\n');
     }
 }
-#endif // PLF_DEBUG
 
 /*
  * @brief Callback registered with the GAP layer
@@ -117,22 +122,7 @@ static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)
  */
 static void ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 {
-#if PLF_DEBUG
     print_report_ind(ind);
-#endif // PLF_DEBUG
-
-#ifdef AUTO_TEST
-    static int report_cnt = 0;
-#ifdef IS_FOR_SIM
-    if (++report_cnt >= 8)
-#else // IS_FOR_SIM
-    if (++report_cnt >= 40)
-#endif // IS_FOR_SIM
-    {
-	atm_scan_stop(activity_idx);
-	report_cnt = 0;
-    }
-#endif // AUTO_TEST
 }
 
 /*
@@ -209,11 +199,7 @@ static void scan_start(void)
 static void scan_restart(void)
 {
     ATM_LOG(V, "%s", __func__);
-#ifdef AUTO_TEST
-    UartEndSimulation();
-#else
     atm_scan_start(activity_idx, atm_get_dflt_scan_params(0));
-#endif
 }
 
 /*
@@ -267,11 +253,6 @@ static rep_vec_err_t user_appm_init(void)
 	(uint8_t *)&restart_time_csec) != NVDS_OK) {
 	restart_time_csec = 0;
     }
-
-#ifdef AUTO_TEST
-    restart_time_csec = 1;
-    sleep_enable = SLEEP_ENABLE_RETAIN_DROP;
-#endif
 
     ATM_LOG(D, "BLE restart duration (ms): %" PRIu32, restart_time_csec*10);
 
