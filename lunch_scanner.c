@@ -51,17 +51,17 @@ static uint8_t activity_idx = ATM_INVALID_SCANIDX;
 static uint32_t restart_time_csec; // centi-seconds
 static sw_timer_id_t tid_restart;
 
+static void parse_adv_data(uint8_t data[], uint16_t length) {
+    if(!(data[6] == 0xaa && data[7] == 0xfe)) return;
+}
+
 static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)
 {
     // Quick filtering for Atmosic Device
-    uint8_t target[3] = {0x7C, 0x69, 0x6B};
-    bool pass_filter = true;
-
-    for(int i = 0; i < 3; i++) {
-        if (param->trans_addr.addr.addr[i] != target[i]) pass_filter = false;
-    }
-
-    if(!pass_filter) return;
+    // LSB Example Address: c900006b697c
+    if(param->trans_addr.addr.addr[3] != 0x6b) return;
+    if(param->trans_addr.addr.addr[4] != 0x69) return;
+    if(param->trans_addr.addr.addr[5] != 0x7c) return;
 
     printf("RSSI %4d ", param->rssi);
     printf("phy %u/%u ", param->phy_prim, param->phy_second);
@@ -114,7 +114,11 @@ static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)
 	}
 	putchar('\n');
     }
+
+    parse_adv_data(param->data, param->length);
 }
+
+#pragma region GAP_CALLBACKS
 
 /*
  * @brief Callback registered with the GAP layer
@@ -139,6 +143,10 @@ const atm_gap_cbs_t gap_callbacks = {
     .ext_adv_ind = ext_adv_ind,
     .init_cfm = init_cfm,
 };
+
+#pragma endregion GAP_CALLBACKS
+
+#pragma region SCAN_CALLBACKS
 
 /*
  * @brief Callback registered with the ATM scan module
@@ -166,6 +174,10 @@ const atm_scan_cbs_t scan_callbacks = {
     .scan_start_cfm = start_cfm,
     .scan_stop_ind = stop_ind,
 };
+
+#pragma endregion SCAN_CALLBACKS
+
+#pragma region APPLICATION_STATE
 
 /*
  * @brief Fetches GAP parameters and triggers GAP initialization. Results in
@@ -240,6 +252,8 @@ static void restart_timer(uint8_t idx, const void *ctx)
 {
     atm_asm_move(S_TBL_IDX, OP_RESTART_SCAN);
 }
+
+#pragma endregion APPLICATION_STATE
 
 /*
  * @brief Initialize the app data structures and start its state machine
