@@ -44,15 +44,31 @@ typedef enum {
 #define S_TBL_IDX 0
 #define ATM_INVALID_SCANIDX 0xFF
 
-ATM_LOG_LOCAL_SETTING("BLE_scan", D);
+ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
 
 static pm_lock_id_t scan_lock_hiber;
 static uint8_t activity_idx = ATM_INVALID_SCANIDX;
 static uint32_t restart_time_csec; // centi-seconds
 static sw_timer_id_t tid_restart;
 
-static void parse_adv_data(uint8_t data[], uint16_t length) {
-    if(!(data[6] == 0xaa && data[7] == 0xfe)) return;
+static void parse_adv_data(const uint8_t data[], const uint16_t length) {
+    //   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+    //  02 01 06 03 03 aa fe 17 16 aa fe 00 00 d9 a7 09 49 5e 0a b9 1d 17 04 00 00 00 00 00 00 00 00
+    //  02 01 06 03 03 aa fe 17 16 aa fe 00 00 d9 a7 09 49 5e 0a b9 1d 17 04 03 00 04 08 06 00 00 00
+
+    ATM_LOG(D, "Printing Data... %02x %02x", data[5], data[6]);
+
+    // Check if packet type is eddystone
+    if(!(data[5] == 0xaa && data[6] == 0xfe)) return;
+
+    // 95030486
+    int student_id[8] = { 9, 5, 0 };
+    int idx = 3;
+    for(int i = 23; i < 23 + 5; i++) {
+        student_id[idx++] = data[i];
+    }
+
+    for(int i = 0; i < 8; i++) printf("%d", student_id[i]);
 }
 
 static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)

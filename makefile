@@ -25,6 +25,8 @@ CFLAGS += \
 	-DCFG_GAP_PARAM_CONST=0 \
 	-DCFG_GAP_SCAN_MAX_INST=1 \
 	-DGAP_SCAN_PARM_NAME="config_scan_params.h" \
+	-Wno-unknown-pragmas \
+
 
 flash_nvds.data := \
 	09-APP_BLE_RSTRT_DUR/default \
