@@ -56,23 +56,33 @@ static void parse_adv_data(const uint8_t data[], const uint16_t length) {
     //  02 01 06 03 03 aa fe 17 16 aa fe 00 00 d9 a7 09 49 5e 0a b9 1d 17 04 00 00 00 00 00 00 00 00
     //  02 01 06 03 03 aa fe 17 16 aa fe 00 00 d9 a7 09 49 5e 0a b9 1d 17 04 03 00 04 08 06 00 00 00
 
-    ATM_LOG(D, "Printing Data... %02x %02x", data[5], data[6]);
+    ATM_LOG(D, "Printing Data...");
 
     // Check if packet type is eddystone
-    if(!(data[5] == 0xaa && data[6] == 0xfe)) return;
+    //if(!(data[5] == 0xaa && data[6] == 0xfe)) return;
 
-    // 95030486
-    int student_id[8] = { 9, 5, 0 };
-    int idx = 3;
-    for(int i = 23; i < 23 + 5; i++) {
-        student_id[idx++] = data[i];
+    // Copy 10 student id digits
+    uint8_t id_arr[10];
+    for(int i = 0; i < 10; i++) {
+        id_arr[10-i-1] = data[length-i-1];
     }
 
-    for(int i = 0; i < 8; i++) printf("%d", student_id[i]);
+    // Convert id_arr to "string"
+    char student_id[11];
+    int index = 0;
+    for (int i=0; i<10; i++) {
+        if(id_arr[i] == 0xFF) continue;
+        index += sprintf(&student_id[index], "%d", id_arr[i]);
+    }
+    student_id[10] = '\0';
+
+    ATM_LOG(D, "TODO: Do something with %s", student_id);
 }
 
 static void print_report_ind(ble_gap_ind_ext_adv_report_t const *param)
 {
+    if(!((param->info & BLE_GAP_REPORT_INFO_REPORT_TYPE_MASK) == BLE_GAP_REPORT_TYPE_ADV_LEG)) return;
+
     // Quick filtering for Atmosic Device
     // LSB Example Address: c900006b697c
     if(param->trans_addr.addr.addr[3] != 0x6b) return;
