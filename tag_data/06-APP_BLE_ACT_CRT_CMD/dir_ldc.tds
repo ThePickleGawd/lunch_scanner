@@ -1,0 +1,34 @@
+# own_addr_type = GAPM_STATIC_ADDR
+00
+
+# PAD
+00 00
+
+# adv_param.
+00	#   type = GAPM_ADV_TYPE_LEGACY
+00	#   disc_mode = GAPM_ADV_MODE_NON_DISC
+05 00	#   prop = GAPM_ADV_PROP_DIR_CONN_LDC_MASK
+00	#   max_tx_pwr
+00	#   filter_pol
+
+# adv_param.peer_addr.
+c9 11 11 6b 69 7c	#   addr
+00			#   addr_type
+00 00 00		#   PAD
+
+# adv_param.prim_cfg.
+20 00 00 00	#   adv_intv_min = 20ms
+20 00 00 00	#   adv_intv_max = 20ms
+07		#   chnl_map = 37,38,39
+01		#   phy = GAP_PHY_LE_1MBPS
+00 00		#   PAD
+
+# adv_param.second_cfg.
+00	#   max_skip
+00	#   phy
+00	#   adv_sid
+00	#   PAD
+
+# adv_param.period_cfg.
+00 00	#   adv_intv_min
+00 00	#   adv_intv_max

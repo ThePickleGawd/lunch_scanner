@@ -1,9 +1,8 @@
 include ../../user/common.mk
 
-BOARD=m2202
 DEBUG := 1
 
-DRIVERS := interrupt sw_timer timer atm_pm
+DRIVERS := atm_ble interrupt sw_timer timer
 LIBRARIES := prf
 
 FRAMEWORK_MODULES := \
@@ -14,23 +13,50 @@ FRAMEWORK_MODULES := \
 	atm_gap \
 	atm_log \
 	ble_gap \
+	atm_adv \
 
-UU_TEST := lunch_scanner atm_scan
+UU_TEST := BLE_adv_scan
+
 INCLUDES += .
 
+NUM_FOUND ?= 1
+
 CFLAGS += \
-	-DNO_GAP_SEC \
-	-DNO_ATM_ADV \
-	-DNO_BLE_GATTC \
-	-DCFG_GAP_PARAM_CONST=0 \
+	-DCFG_NO_GAP_SEC \
+	-DCFG_NO_GATTC \
+	-DCFG_GAP_ROLE=BLE_GAP_ROLE_ALL \
+	-DNUM_FOUND=$(NUM_FOUND) \
+	-DCFG_GAP_ADV_MAX_INST=1 \
+	-DGAP_ADV_PARM_NAME="bas_param_adv.h" \
 	-DCFG_GAP_SCAN_MAX_INST=1 \
-	-DGAP_SCAN_PARM_NAME="config_scan_params.h" \
-	-Wno-unknown-pragmas \
+	-DGAP_SCAN_PARM_NAME="bas_param_scan.h" \
 
+ifdef ROUND_ROBIN
+CFLAGS += -DROUND_ROBIN
+endif
 
-flash_nvds.data := \
-	09-APP_BLE_RSTRT_DUR/default \
-	11-SLEEP_ENABLE/hib \
-	12-EXT_WAKEUP_ENABLE/enable2 \
+flash_nvds.data += \
+	02-DEVICE_NAME/ble_adv_scan \
+	11-SLEEP_ENABLE/ret \
+	a4-SCAN_SETTING/1s_scan \
+
+ADV ?= HDC
+
+ifeq ($(ADV),HDC)
+# High Duty Cycle Direct Beacon Setting
+flash_nvds.data += \
+	05-APP_BLE_ACT_STRT_CMD/100ms_adv \
+	06-APP_BLE_ACT_CRT_CMD/dir_hdc \
+	a3-ADV_DURATION/100ms \
+
+else ifeq ($(ADV),LDC)
+# Low Duty Cycle Direct Beacon Setting at makefile
+flash_nvds.data += \
+	05-APP_BLE_ACT_STRT_CMD/1s_adv \
+	06-APP_BLE_ACT_CRT_CMD/dir_ldc \
+
+else
+$(error "usage: make $(MAKECMDGOALS) ADV=<HDC|LDC>")
+endif
 
 include $(COMMON_USER_DIR)/framework.mk

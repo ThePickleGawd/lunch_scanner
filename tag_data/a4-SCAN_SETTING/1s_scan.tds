@@ -1,0 +1,3 @@
+a0 00 # scan interval, unit:0.625 ms
+a0 00 # scan window, unit:0.625 ms
+64 00 # scan duration, unit:10ms

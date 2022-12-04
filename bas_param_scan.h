@@ -1,11 +1,11 @@
 /**
  *******************************************************************************
  *
- * @file config_scan_params.h
+ * @file bas_param_scan.h
  *
  * @brief Scan configuration
  *
- * Copyright (C) Atmosic 2020
+ * Copyright (C) Atmosic 2021
  *
  *******************************************************************************
  */
@@ -39,11 +39,7 @@
 //    <q.3> Active scan on LE Coded PHY
 //    <q.4> Accept directed advertising packets if we RPA's target cannot be solved
 //    <q.5> Filter truncated advertising or scan response reports
-#ifdef IS_FOR_SIM
-#define CFG_SCAN0_START_PROP 0x5
-#else // IS_FOR_SIM
-#define CFG_SCAN0_START_PROP 0xF
-#endif // IS_FOR_SIM
+#define CFG_SCAN0_START_PROP 0x01
 //</h>
 
 
@@ -52,18 +48,18 @@
 //    <0=> Disable filtering of duplicated packets
 //    <1=> Enable filtering of duplicated packets
 //    <2=> Enable filtering of duplicated packets, reset for each scan period
-#define CFG_SCAN0_START_DUP_FILTER_POLICY 0
+#define CFG_SCAN0_START_DUP_FILTER_POLICY 1
 
 //<h> Scan interval and windows setting
 // <o> 1M PHY Scan interval (uint: us)
 // <i> 1M PHY Scan interval (uint: us)
 // <2500-10240000>
-#define SCAN0_1M_INTERVAL 10000
+#define SCAN0_1M_INTERVAL 100000
 
 // <o> 1M PHY Scan window (uint: us)
 // <i> 1M PHY Scan window (uint: us)
 // <2500-10240000>
-#define SCAN0_1M_WINDOWS 10000
+#define SCAN0_1M_WINDOWS 100000
 
 // <o> Coded PHY Scan interval (uint: us)
 // <i> Coded PHY Scan interval (uint: us)
@@ -77,13 +73,13 @@
 
 // <c1> Scan continuously
 // <i> Scan continuously (will ignore SCAN0_DURATION parameter)
-#define SCAN_CONTINOUS
+//#define SCAN_CONTINOUS
 // </c>
 
 // <o> Scan duration (uint: ms)
 // <i> Scan duration (uint: ms)
 // <10-655350>
-//#define SCAN0_DURATION 500
+#define SCAN0_DURATION 1000
 
 // <c1> Scan procedure is not periodic
 // <i> Scan procedure is not periodic (will ingore SCAN0_PERIOD parameter)
