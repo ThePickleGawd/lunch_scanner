@@ -27,9 +27,9 @@ CFLAGS += \
 	-DCFG_GAP_ROLE=BLE_GAP_ROLE_ALL \
 	-DNUM_FOUND=$(NUM_FOUND) \
 	-DCFG_GAP_ADV_MAX_INST=1 \
-	-DGAP_ADV_PARM_NAME="bas_param_adv.h" \
 	-DCFG_GAP_SCAN_MAX_INST=1 \
-	-DGAP_SCAN_PARM_NAME="bas_param_scan.h" \
+	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
+	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
 
 ifdef ROUND_ROBIN
 CFLAGS += -DROUND_ROBIN
