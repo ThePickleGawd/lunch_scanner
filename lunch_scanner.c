@@ -27,6 +27,8 @@
 // My stuff
 #include "lunch_scanner.h"
 
+ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
+
 /*
  * FUNCTION DECLARATIONS
  *******************************************************************************
@@ -69,7 +71,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     // TODO: check if this is the lunch beacon
     if(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT) {
         if(ble_gap_addr_compare(&ind->trans_addr, &app_env.create->adv_param.peer_addr)) {
-            ATM_LOG(D, "Found Data: %s", (char *)ind->data);
+            ATM_LOG(D, "Found Data: %s", (const char *)ind->data);
         }
     }
 }
@@ -80,6 +82,9 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
  */
 static void gap_init_cfm(ble_err_code_t status)
 {
+    app_env.adv_act_idx = ATM_INVALID_SCANIDX;
+    app_env.scan_act_idx = ATM_INVALID_SCANIDX;
+
     atm_asm_move(S_TBL_IDX, OP_GAP_INIT_CFM);   
 }
 

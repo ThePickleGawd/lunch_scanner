@@ -15,7 +15,7 @@ FRAMEWORK_MODULES := \
 	ble_gap \
 	atm_adv \
 
-UU_TEST := BLE_adv_scan
+UU_TEST := lunch_scanner
 
 INCLUDES += .
 
@@ -28,6 +28,8 @@ CFLAGS += \
 	-DNUM_FOUND=$(NUM_FOUND) \
 	-DCFG_GAP_ADV_MAX_INST=1 \
 	-DCFG_GAP_SCAN_MAX_INST=1 \
+	-DCFG_ADV_CREATE_PARAM_CONST=0 \
+	-DCFG_ADV_START_PARAM_CONST=0 \
 	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
 	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
 

@@ -12,9 +12,6 @@
 
 #pragma once
 
-#include "atm_adv_param.h"
-
-
 #define ATM_INVALID_SCANIDX 0xFF
 
 typedef enum {
@@ -52,6 +49,6 @@ typedef enum {
 typedef struct {
     __ATM_ADV_CREATE_PARAM_CONST atm_adv_create_t *create;
     __ATM_ADV_START_PARAM_CONST atm_adv_start_t *start;
-    uint8_t scan_act_idx = ATM_INVALID_SCANIDX;
-    uint8_t adv_act_idx =  ATM_INVALID_SCANIDX;
+    uint8_t scan_act_idx;
+    uint8_t adv_act_idx;
 } app_env_t;
