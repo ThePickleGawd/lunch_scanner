@@ -58,4 +58,12 @@ else
 $(error "usage: make $(MAKECMDGOALS) ADV=<HDC|LDC>")
 endif
 
+# SRC
+SRC_TOP = src
+#SRC_BT = src/bt
+#SRC_NON_BT = src/non_bt
+INCLUDES += $(SRC_TOP)
+C_SRCS += \
+	$(SRC_TOP)/lunch_parser.c \
+
 include $(COMMON_USER_DIR)/framework.mk

@@ -16,4 +16,4 @@
  * @brief Try to parse lunch data from advertisement data
  * @returns true on success, false otherwise
 */
-bool try_parse_lunch_data(uint8_t data[], uint8_t len);
+bool try_parse_lunch_data(uint8_t const data[], uint8_t len);
