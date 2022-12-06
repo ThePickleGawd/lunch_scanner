@@ -72,6 +72,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     if(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT) {
         if(ble_gap_addr_compare(&ind->trans_addr, &app_env.create->adv_param.peer_addr)) {
             ATM_LOG(D, "Found Data: %s", (const char *)ind->data);
+            
         }
     }
 }
