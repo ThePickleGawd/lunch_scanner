@@ -26,6 +26,7 @@
 
 // My stuff
 #include "lunch_scanner.h"
+#include "lunch_parser.h"
 
 ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
 
@@ -68,13 +69,15 @@ static sw_timer_id_t tid_adv_timer;
  */
 static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 {
-    // TODO: check if this is the lunch beacon
-    if(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT) {
-        if(ble_gap_addr_compare(&ind->trans_addr, &app_env.create->adv_param.peer_addr)) {
-            ATM_LOG(D, "Found Data: %s", (const char *)ind->data);
-            
-        }
-    }
+    // Return if report is not complete
+    if(!(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT)) return;
+
+    // Return if address doesn't match
+    if(!ble_gap_addr_compare(&ind->trans_addr, &app_env.create->adv_param.peer_addr)) return;
+    
+    // Parse lunch data
+    // TODO: do something with RSSI?
+    try_parse_lunch_data(ind->data, ind->length);
 }
 
 /**

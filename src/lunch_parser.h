@@ -12,5 +12,8 @@
 
 #pragma once
 
-
-void try_parse_lunch_data(uint8_t[] data);
+/**
+ * @brief Try to parse lunch data from advertisement data
+ * @returns true on success, false otherwise
+*/
+bool try_parse_lunch_data(uint8_t data[], uint8_t len);
