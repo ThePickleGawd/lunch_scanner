@@ -41,7 +41,7 @@ ATM_LOG_LOCAL_SETTING("lunch_parser", D);
 
 static void send_lunch_data(void)
 {
-    ATM_LOG(D, "TODO: send lunch data to server/school software system");
+    ATM_LOG(V, "TODO: send lunch data to server/school software system");
 }
 
 /*  Complete service list: 0x2af5 = fixed string 16
@@ -56,7 +56,7 @@ static void send_lunch_data(void)
 
 bool try_parse_lunch_data(uint8_t const data[], uint8_t len)
 {
-    ATM_LOG(D, "Try parse data");
+    ATM_LOG(V, "%s", __func__);
 
     int idx = 0;
 
@@ -65,31 +65,29 @@ bool try_parse_lunch_data(uint8_t const data[], uint8_t len)
         uint8_t cur_len = data[idx + LEN_OFFSET];
         uint8_t cur_type = data[idx + TYPE_OFFSET];
 
-        ATM_LOG(D, "Len: %d, Type: %02x", cur_len, cur_type);
+        ATM_LOG(V, "Len: %d, Type: %02x", cur_len, cur_type);
 
         if(cur_len == 0) {
-            ATM_LOG(E, "Invalid Data Packet");
+            ATM_LOG(W, "Invalid Data Packet");
             return false;
         }
 
         // Check if this is the service data
         if(cur_type == SERVICE_DATA) {
-            ATM_LOG(D, "Ok we are here");
             
             // Copy the service data into a new array
             uint8_t buffer[cur_len - TYPE_OFFSET];
             memcpy(buffer, &data[idx + DATA_OFFSET], cur_len - TYPE_OFFSET);
 
             if(buffer[0] == 0xf5 && buffer[1] == 0x2a) {
-                ATM_LOG(D, "It's a lunch beacon!");
                 uint8_t school_id[6] = {0};
                 uint8_t student_id[10] = {0};
 
                 memcpy(school_id, &buffer[2], SCHOOL_ID_LEN);
                 memcpy(student_id, &buffer[2 + SCHOOL_ID_LEN], STUDENT_ID_LEN);
 
-                ATM_LOG(D, "School ID: %s", school_id);
-                ATM_LOG(D, "Student ID: %s", student_id);
+                ATM_LOG(V, "Reading School ID: %s", school_id);
+                ATM_LOG(W, "Reading Student ID: %s", student_id);
 
                 send_lunch_data();
             }

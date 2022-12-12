@@ -28,7 +28,7 @@
 #include "lunch_scanner.h"
 #include "lunch_parser.h"
 
-ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
+ATM_LOG_LOCAL_SETTING("lunch_scanner", W);
 
 /*
  * FUNCTION DECLARATIONS
