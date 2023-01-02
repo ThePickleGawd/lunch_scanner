@@ -2,7 +2,7 @@ include ../../user/common.mk
 
 DEBUG := 1
 
-DRIVERS := atm_ble interrupt sw_timer timer
+DRIVERS := atm_ble interrupt sw_timer timer keyboard keyboard_hid sw_event atm_pm
 LIBRARIES := prf
 
 FRAMEWORK_MODULES := \
@@ -29,7 +29,8 @@ CFLAGS += \
 	-DCFG_ADV_START_PARAM_CONST=0 \
 	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
 	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
-	-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
+
+#-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
 
 ifdef ROUND_ROBIN
 CFLAGS += -DROUND_ROBIN
@@ -40,24 +41,11 @@ flash_nvds.data += \
 	11-SLEEP_ENABLE/ret \
 	a4-SCAN_SETTING/1s_scan \
 
-ADV ?= HDC
-
-ifeq ($(ADV),HDC)
 # High Duty Cycle Direct Beacon Setting
 flash_nvds.data += \
 	05-APP_BLE_ACT_STRT_CMD/100ms_adv \
 	06-APP_BLE_ACT_CRT_CMD/dir_hdc \
-	a3-ADV_DURATION/100ms \
-
-else ifeq ($(ADV),LDC)
-# Low Duty Cycle Direct Beacon Setting at makefile
-flash_nvds.data += \
-	05-APP_BLE_ACT_STRT_CMD/1s_adv \
-	06-APP_BLE_ACT_CRT_CMD/dir_ldc \
-
-else
-$(error "usage: make $(MAKECMDGOALS) ADV=<HDC|LDC>")
-endif
+	a3-ADV_DURATION/500ms \
 
 # SRC
 SRC_TOP = src
