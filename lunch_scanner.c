@@ -76,7 +76,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     if(!ble_gap_addr_compare(&ind->trans_addr, &app_env.create->adv_param.peer_addr)) return;
     
     // Parse lunch data
-    // TODO: do something with RSSI?
+    // TODO: do something with RSSI
     try_parse_lunch_data(ind->data, ind->length);
 }
 
