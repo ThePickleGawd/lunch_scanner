@@ -24,8 +24,6 @@
 #include "atm_adv.h"
 #include "atm_ble.h"
 #include "atm_co_utils.h"
-#include "keyboard.h"
-#include "keyboard_hid.h"
 
 // My stuff
 #include "lunch_scanner.h"
@@ -61,6 +59,8 @@ static uint16_t adv_time_csec;
 
 static sw_timer_id_t tid_adv_timer;
 
+static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
+
 int tmpCounter = 0;
 double totalDist;
 int maxCount = 5;
@@ -69,6 +69,15 @@ int maxCount = 5;
  * GAP CALLBACKS
  *******************************************************************************
  */
+
+static void print_bd_addr(const uint8_t addr[]) {
+    ATM_LOG(D, "%x:%x:%x:%x:%x:%x", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
+}
+
+static bool matches_bd_vendor(const uint8_t addr[]) {
+    // ADDR is in LSB order
+    return addr[5] == vendor_id[0] && addr[4] == vendor_id[1] && addr[3] == vendor_id[2];
+}
 
 /**
  * @brief Callback registered with the GAP layer
@@ -79,24 +88,26 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     // Return if report is not complete
     if(!(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT)) return;
 
-    // Return if address doesn't match
-    if(!ble_gap_addr_compare(&ind->trans_addr, &app_env.create->adv_param.peer_addr)) return;
+    // Return if vendor address doesn't match
+    if(!matches_bd_vendor(ind->trans_addr.addr.addr)) return;
+
+    print_bd_addr(ind->trans_addr.addr.addr);
 
     double measuredPower = -80;
     double N = 2;
     double distance = pow(10, (measuredPower - (double)ind->rssi) / (10 * N));
-    ATM_LOG(W, "RSSI: %d Distance: %f", ind->rssi, distance);
+    ATM_LOG(D, "RSSI: %d Distance: %f", ind->rssi, distance);
     if(tmpCounter++ < maxCount) {
         totalDist += distance;
     } else {
-        ATM_LOG(W, "Avg Distance is %f", (totalDist / maxCount));
+        ATM_LOG(D, "Avg Distance is %f", (totalDist / maxCount));
         totalDist = 0;
         tmpCounter = 0;
     }
     
     // Parse lunch data
     // TODO: do something with RSSI?
-    //try_parse_lunch_data(ind->data, ind->length);
+    try_parse_lunch_data(ind->data, ind->length);
 }
 
 /**
@@ -216,11 +227,6 @@ static void adv_load_nvds(void)
  *******************************************************************************
  */
 
-static int key_cb(struct keyboard_report_s report) {
-    ATM_LOG(D, "UHHH_IDK");
-    return 0;
-}
-
 /**
  * @brief Load advertisement related parameters and trigger GAP initialization.
  * @note Called upon module initialization.
@@ -229,8 +235,6 @@ static void lunch_ble_init(void)
 {
     atm_ble_set_advint(1000); // 1 second interval between different adv channels
     adv_load_nvds();
-
-    keyboard_start(key_cb, NULL, NULL, NULL, NULL, NULL);
 
     // Initialize GAP
     static atm_gap_cbs_t const gap_callbacks = {

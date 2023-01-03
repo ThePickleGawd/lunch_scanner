@@ -2,7 +2,7 @@ include ../../user/common.mk
 
 DEBUG := 1
 
-DRIVERS := atm_ble interrupt sw_timer timer keyboard keyboard_hid sw_event atm_pm
+DRIVERS := atm_ble interrupt sw_timer timer
 LIBRARIES := prf
 
 FRAMEWORK_MODULES := \
