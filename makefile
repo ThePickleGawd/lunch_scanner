@@ -29,8 +29,7 @@ CFLAGS += \
 	-DCFG_ADV_START_PARAM_CONST=0 \
 	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
 	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
-
-#-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
+	-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
 
 ifdef ROUND_ROBIN
 CFLAGS += -DROUND_ROBIN
@@ -54,5 +53,6 @@ SRC_TOP = src
 INCLUDES += $(SRC_TOP)
 C_SRCS += \
 	$(SRC_TOP)/lunch_parser.c \
+	$(SRC_TOP)/lunch_manager.c \
 
 include $(COMMON_USER_DIR)/framework.mk

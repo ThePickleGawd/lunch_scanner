@@ -39,11 +39,6 @@ ATM_LOG_LOCAL_SETTING("lunch_parser", D);
  *******************************************************************************
  */
 
-static void send_lunch_data(void)
-{
-    ATM_LOG(V, "TODO: send lunch data to server/school software system");
-}
-
 /*  Complete service list: 0x2af5 = fixed string 16
     0x03, 0x03, 0xf5, 0x2a
     Service Data
@@ -54,7 +49,7 @@ static void send_lunch_data(void)
     '9', '5', '0', '3', '0', '4', '8', '6', 0x00, 0x00
 */
 
-bool try_parse_lunch_data(uint8_t const data[], uint8_t len)
+bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out)
 {
     ATM_LOG(V, "%s", __func__);
 
@@ -80,16 +75,11 @@ bool try_parse_lunch_data(uint8_t const data[], uint8_t len)
             memcpy(buffer, &data[idx + DATA_OFFSET], cur_len - TYPE_OFFSET);
 
             if(buffer[0] == 0xf5 && buffer[1] == 0x2a) {
-                uint8_t school_id[6] = {0};
-                uint8_t student_id[10] = {0};
+                memcpy(out->school_id, &buffer[2], SCHOOL_ID_LEN);
+                memcpy(out->student_id, &buffer[2 + SCHOOL_ID_LEN], STUDENT_ID_LEN);
 
-                memcpy(school_id, &buffer[2], SCHOOL_ID_LEN);
-                memcpy(student_id, &buffer[2 + SCHOOL_ID_LEN], STUDENT_ID_LEN);
-
-                ATM_LOG(V, "Reading School ID: %s", school_id);
-                ATM_LOG(W, "Reading Student ID: %s", student_id);
-
-                send_lunch_data();
+                ATM_LOG(V, "Reading School ID: %s", out->school_id);
+                ATM_LOG(V, "Reading Student ID: %s", out->student_id);
             }
         }
 

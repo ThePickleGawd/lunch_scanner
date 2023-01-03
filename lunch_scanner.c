@@ -28,6 +28,7 @@
 // My stuff
 #include "lunch_scanner.h"
 #include "lunch_parser.h"
+#include "lunch_manager.h"
 
 ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
 
@@ -93,6 +94,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 
     print_bd_addr(ind->trans_addr.addr.addr);
 
+    // TODO: something with RSSI and close enough and average over small time interval for accuracy
     double measuredPower = -80;
     double N = 2;
     double distance = pow(10, (measuredPower - (double)ind->rssi) / (10 * N));
@@ -106,8 +108,21 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     }
     
     // Parse lunch data
-    // TODO: do something with RSSI
-    try_parse_lunch_data(ind->data, ind->length);
+    nvds_lunch_data_t lunch_data = {0};
+    bool success = try_parse_lunch_data(ind->data, ind->length, &lunch_data);
+
+    if (!success) {
+        ATM_LOG(E, "Error - Could not parse lunch data");
+        return;
+    }
+
+    if(student_is_checked_in(lunch_data)) {
+        ATM_LOG(D, "Student is already checked in");
+        return;
+    }
+
+    check_in_student(lunch_data);
+    ATM_LOG(W, "Checked in %s", lunch_data.student_id);
 }
 
 /**
