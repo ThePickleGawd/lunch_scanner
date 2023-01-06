@@ -148,7 +148,7 @@ static void scan_stop_ind(uint8_t inst_idx, ble_err_code_t status)
 {
     // TODO: we probably want to restart the scan here
     ATM_LOG(D, "Restarting scan");
-    atm_asm_move(S_TBL_IDX, OP_SCAN_STOPPED_START_ADV);
+    atm_asm_move(S_TBL_IDX, OP_RESTART_SCAN);
 }
 
 /*
@@ -169,13 +169,10 @@ static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_cod
             ASSERT_INFO(status == BLE_ERR_NO_ERROR, act_idx, status);
             atm_asm_move(S_TBL_IDX, OP_START_ADV_CFM);
         } break;
-        case ATM_ADV_OFF: {
-            if(adv_time_csec) sw_timer_clear(tid_adv_timer);
-            atm_asm_move(S_TBL_IDX, OP_ADV_OFF_IND);
-        } break;
         case ATM_ADV_DELETED: {
-            atm_asm_move(S_TBL_IDX, OP_ADV_DELETE_CFM);
+            atm_asm_move(S_TBL_IDX, OP_DELETE_ADV_CFM);
         } break;
+        case ATM_ADV_OFF:
         case ATM_ADV_IDLE:
         case ATM_ADV_CREATING:
         case ATM_ADV_ADVDATA_SETTING:
@@ -189,15 +186,6 @@ static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_cod
             ATM_LOG(D, "Unhandled state = %d", state);
         } break;
     }
-}
-
-/**
- * @brief advertisement sw timer callback.
- * @note Called upon avertisment sw timer timeout.
- */
-static void adv_timer(uint8_t idx, void const *ctx)
-{
-    atm_asm_move(S_TBL_IDX, OP_ADV_TIMEOUT);
 }
 
 /**
@@ -220,10 +208,6 @@ static void adv_load_nvds(void)
     nvds_get(NVDS_TAG_ADV_DURATION, &adv_dur_size, (uint8_t *)&adv_time_csec);
 
     ATM_LOG(D, "BLE adv duration: %dms", adv_time_csec * 10);
-
-    if(adv_time_csec) {
-        tid_adv_timer = sw_timer_alloc(adv_timer, NULL);
-    }
 }
 
 /*
@@ -350,17 +334,6 @@ static void lunch_start_scan(void)
 }
 
 /**
- * @brief Scan on. Results in a state machine
- * transition to S_SCAN_ON.
- * @note Called when the scan activity is turned-on.
- */
-static void lunch_scan_on(void)
-{
-    ATM_LOG(V, "%s", __func__);
-    atm_asm_set_state_op(S_TBL_IDX, S_SCAN_ON, OP_END);
-}
-
-/**
  * @brief Delete advertisement activity. Results in a state machine
  * transition to S_ADV_DELETING.
  * @note Called when the scan has stopped and tries to recreate
@@ -381,26 +354,32 @@ static void lunch_delete_adv(void)
      * Step 2: Create scan
      * Step 3: Create adv
      * Step 4: Start adv
-     * Step 5: Adv timeout, stop adv
-     * Step 6: Start scan
-     * Step 7: Scan timeout
-     * Step 8: Check scan result:
-     *      (1) search new target -> update target addr and start from Step 3
-     *      (2) search old target -> start from Step 4
+     * Step 5: Connect to PC
+     * Step 6: Delete adv
+     * Step 7: Start scan
+     * Step 8: Scan timeout, Restart
      */
 static state_entry const s_tbl[] = {
+    // Initialize module
     {S_OP(S_INIT, OP_MODULE_INIT), S_GAP_INITIATING, lunch_ble_init},
+    // Create scan
     {S_OP(S_GAP_INITIATING, OP_GAP_INIT_CFM), S_SCAN_CREATING, lunch_create_scan},
+    // Create adv
 	{S_OP(S_SCAN_CREATING, OP_CREATE_SCAN_CFM), S_ADV_CREATING, lunch_create_adv},
+    // Start adv after we create adv
 	{S_OP(S_ADV_CREATING, OP_CREATE_ADV_CFM), S_ADV_STARTING, lunch_start_adv},
+    // Wait for connection
 	{S_OP(S_ADV_STARTING, OP_START_ADV_CFM), S_ADV_STARTED, lunch_adv_on},
-	{S_OP(S_ADV_STARTED, OP_ADV_TIMEOUT), S_ADV_STOPPING, lunch_stop_adv},
-	{S_OP(S_ADV_STOPPING, OP_ADV_OFF_IND), S_SCAN_STARTING, lunch_start_scan},
-	{S_OP(S_ADV_STARTED, OP_ADV_OFF_IND), S_SCAN_STARTING, lunch_start_scan},
-	{S_OP(S_SCAN_STARTING, OP_START_SCAN_CFM), S_SCAN_ON, lunch_scan_on},
-	{S_OP(S_SCAN_ON, OP_SCAN_STOPPED_START_ADV), S_ADV_STARTING, lunch_start_adv},
-	{S_OP(S_SCAN_ON, OP_SCAN_STOPPED_RECREATE_ADV), S_ADV_DELETING, lunch_delete_adv},
-	{S_OP(S_ADV_DELETING, OP_ADV_DELETE_CFM), S_ADV_CREATING, lunch_create_adv},
+    // We are connected, delete adv
+    {S_OP(S_ADV_STARTED, OP_CONNECTED), S_ADV_DELETING, lunch_delete_adv},
+    // Start the scan after we delete adv
+    {S_OP(S_ADV_DELETING, OP_DELETE_ADV_CFM), S_SCAN_STARTING, lunch_start_scan},
+    // Start scan after we are connected
+	{S_OP(S_SCAN_STARTING, OP_START_SCAN_CFM), S_SCAN_ON, NULL},
+    // Scan timeout
+	{S_OP(S_SCAN_ON, OP_SCAN_TIMEOUT), S_SCAN_OFF, lunch_start_adv},
+    // Start scan again
+	{S_OP(S_SCAN_OFF, OP_RESTART_SCAN), S_SCAN_STARTING, lunch_start_scan},
 };
 
 /**
