@@ -13,7 +13,6 @@
 #include "lunch_manager.h"
 #include "khash.h"
 #include "atm_log.h"
-#include "i2c.h"
 #include "base_addr.h"
 
 /*
@@ -26,7 +25,6 @@ ATM_LOG_LOCAL_SETTING("lunch_manager", D);
 KHASH_SET_INIT_STR(str)
 
 #define I2C_CLK_100K 100000
-#define REPORT_KEY_ARRAY_SIZE 6
 
 /*
  * VARIABLES
@@ -34,11 +32,6 @@ KHASH_SET_INIT_STR(str)
  */
 
 static khash_t(str) *hash_map;
-
-static i2c_dev_t i2c_dev = {
-    .base = CMSDK_I2C0_BASE,
-    .enable_data_pullup = true
-};
 
 /*
  * FUNCTIONS
@@ -60,6 +53,7 @@ void check_in_student(nvds_lunch_data_t data) {
             .reserved = 0,
             .keys = {data.student_id[i], 0, 0, 0, 0, 0}
         };
+        ATM_LOG(D, "TYPING: %d", report.keys[0]);
         //i2c_write(0x20, (uint8_t *) &report, sizeof(report));
     }
 }
@@ -67,12 +61,6 @@ void check_in_student(nvds_lunch_data_t data) {
 bool student_is_checked_in(nvds_lunch_data_t data) {
     khiter_t k = kh_get(str, hash_map, (char *) &data.student_id[0]);
     return !(k == kh_end(hash_map));
-}
-
-static rep_vec_err_t ft260_init(void) {
-    i2c_init(&i2c_dev);
-    i2c_SetClock(&i2c_dev, 100000);
-
 }
 
 __attribute__((constructor))

@@ -2,9 +2,16 @@ include ../../user/common.mk
 
 DEBUG := 1
 
-DRIVERS := atm_ble interrupt sw_timer timer i2c
-LIBRARIES := prf
+DRIVERS := \
+	atm_ble \
+	atm_pm \
+	interrupt \
+	sw_timer \
+	sw_event \
+	timer \
 
+LIBRARIES := prf
+PROFILES := DISS HOGPD
 FRAMEWORK_MODULES := \
 	atm_scan \
 	atm_asm \
@@ -12,8 +19,12 @@ FRAMEWORK_MODULES := \
 	atm_debug \
 	atm_gap \
 	atm_log \
-	ble_gap \
 	atm_adv \
+	app_diss \
+	ble_gap \
+	ble_gap_sec \
+	ble_hogpd \
+	ble_diss \
 
 UU_TEST := lunch_scanner
 
@@ -27,6 +38,7 @@ CFLAGS += \
 	-DCFG_GAP_SCAN_MAX_INST=1 \
 	-DCFG_ADV_CREATE_PARAM_CONST=0 \
 	-DCFG_ADV_START_PARAM_CONST=0 \
+	-DCFG_ADV_DATA_PARAM_CONST=0 \
 	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
 	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
 	-DBLE_MSG_HANDLER_LIST_SIZE=10 \
@@ -43,10 +55,10 @@ flash_nvds.data += \
 	a4-SCAN_SETTING/1s_scan \
 
 # High Duty Cycle Direct Beacon Setting
-flash_nvds.data += \
-	05-APP_BLE_ACT_STRT_CMD/100ms_adv \
-	06-APP_BLE_ACT_CRT_CMD/dir_hdc \
-	a3-ADV_DURATION/500ms \
+# flash_nvds.data += \
+# 	05-APP_BLE_ACT_STRT_CMD/100ms_adv \
+# 	06-APP_BLE_ACT_CRT_CMD/dir_hdc \
+# 	a3-ADV_DURATION/500ms \
 
 # SRC
 SRC_TOP = src
@@ -58,4 +70,5 @@ C_SRCS += \
 	$(SRC_TOP)/lunch_manager.c \
 	$(SRC_BT)/lunch_hogp.c \
 
+include $(COMMON_USER_DIR)/profiles.mk
 include $(COMMON_USER_DIR)/framework.mk

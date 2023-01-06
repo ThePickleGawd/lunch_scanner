@@ -17,6 +17,7 @@
 
 #define SCHOOL_ID_ARR_LEN 6
 #define STUDENT_ID_ARR_LEN 10
+#define REPORT_KEY_ARRAY_SIZE 6
 
 /**
  * @brief NVDS Lunch Data type

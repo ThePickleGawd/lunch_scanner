@@ -118,9 +118,6 @@
 // Non constant ADV creation parameter
 #define CFG_ADV_CREATE_PARAM_CONST 0
 
-// Number of ADV instances
-#define CFG_GAP_ADV_MAX_INST 2
-
 // ADV0 (for reconnection)
 #define CFG_ADV0_OWNER_ADDR_TYPE BLE_OWN_STATIC_ADDR
 

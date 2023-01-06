@@ -60,8 +60,6 @@ static app_env_t app_env;
 
 static uint16_t adv_time_csec;
 
-static sw_timer_id_t tid_adv_timer;
-
 int tmpCounter = 0;
 double totalDist;
 int maxCount = 5;
@@ -121,10 +119,31 @@ static void gap_init_cfm(ble_err_code_t status)
     atm_asm_move(S_TBL_IDX, OP_GAP_INIT_CFM);   
 }
 
-static void gap_conn_ind()
+static void gap_conn_ind(uint8_t conidx, atm_connect_info_t *param)
+{
+    atm_gap_connect_accept(conidx);
+    atm_ble_set_con_txpwr(conidx, 0);
+    atm_gap_print_conn_param(param);
+
+    atm_asm_move(S_TBL_IDX, OP_CONNECTED);
+}
+
+static void gap_disc_ind(uint8_t conidx, ble_gap_ind_discon_t *param)
 {
 
 }
+
+static atm_gap_cbs_t const gap_callbacks = {
+    .ext_adv_ind = gap_ext_adv_ind,
+    .init_cfm = gap_init_cfm,
+    .conn_ind = gap_conn_ind,
+    .disc_ind = gap_disc_ind,
+    .pair_req_ind = NULL,
+    .pair_numeric_ind = NULL,
+    .pair_ind = NULL,
+    .conn_param_updated_ind = NULL,
+    .init_cfm = NULL,
+};
 
 /*
  * SCAN CALLBACKS
@@ -156,6 +175,38 @@ static void scan_stop_ind(uint8_t inst_idx, ble_err_code_t status)
  *******************************************************************************
  */
 
+/**
+ * @brief Load adv and scan parameters and set them into GAP layer.
+ * @note Called when the advertisement activity is created.
+ */
+static void adv_create_cfm(uint8_t act_idx, ble_err_code_t status)
+{
+    ATM_LOG(V, "%s", __func__);
+
+    ASSERT_INFO(status == BLE_ERR_NO_ERROR, act_idx, status);
+
+    app_env.adv_act_idx = act_idx;
+    app_env.adv_data = atm_adv_advdata_param_get(0);
+
+    {
+        ble_err_code_t ret = atm_adv_set_data_sanity(app_env.create, app_env.adv_data, NULL);
+        if(ret != BLE_ERR_NO_ERROR) {
+            ATM_LOG(E, "%s: Set data sanity failed: %#x", __func__, ret);
+            return;
+        }
+    }
+
+    if(app_env.adv_data) {
+        ble_err_code_t ret = atm_adv_set_adv_data(act_idx, app_env.adv_data);
+        if(ret != BLE_ERR_NO_ERROR) {
+            ATM_LOG(E, "%s: Set adv data failed: %#x", __func__, ret);
+	        return;
+        }
+    }
+    
+    atm_asm_move(S_TBL_IDX, OP_CREATE_ADV_CFM);
+}
+
 static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_code_t status)
 {
     ATM_LOG(D, "adv_state = %d", state);
@@ -163,16 +214,17 @@ static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_cod
         case ATM_ADV_CREATED: {
             ASSERT_INFO(status == BLE_ERR_NO_ERROR, act_idx, status);
             app_env.adv_act_idx = act_idx;
-            atm_asm_move(S_TBL_IDX, OP_CREATE_ADV_CFM);
+            adv_create_cfm(act_idx, status);
         } break;
         case ATM_ADV_ON: {
             ASSERT_INFO(status == BLE_ERR_NO_ERROR, act_idx, status);
             atm_asm_move(S_TBL_IDX, OP_START_ADV_CFM);
         } break;
-        case ATM_ADV_DELETED: {
-            atm_asm_move(S_TBL_IDX, OP_DELETE_ADV_CFM);
+        case ATM_ADV_OFF: {
+            ATM_LOG(E, "TODO: Restart adv, I'm too lazy");
+            atm_asm_move(S_TBL_IDX, OP_STOP_ADV_CFM);
         } break;
-        case ATM_ADV_OFF:
+        case ATM_ADV_DELETED:
         case ATM_ADV_IDLE:
         case ATM_ADV_CREATING:
         case ATM_ADV_ADVDATA_SETTING:
@@ -194,15 +246,8 @@ static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_cod
  */
 static void adv_load_nvds(void)
 {
-    if(!atm_adv_create_param_nvds(false, app_env.create)) {
-        ATM_LOG(W, "Failed to load adv create params from NVDS. Using Default");
-        app_env.create = atm_adv_create_param_get(0);
-    }
-
-    if(!atm_adv_start_param_nvds(app_env.start)) {
-        ATM_LOG(W, "Failed to load adv start params from NVDS. Using Default");
-        app_env.start = atm_adv_start_param_get(0);
-    }
+    app_env.create = atm_adv_create_param_get(0);
+    app_env.start = atm_adv_start_param_get(0);
 
     nvds_tag_len_t adv_dur_size = sizeof(adv_time_csec);
     nvds_get(NVDS_TAG_ADV_DURATION, &adv_dur_size, (uint8_t *)&adv_time_csec);
@@ -227,16 +272,6 @@ static void lunch_ble_init(void)
     atm_gap_prf_reg(BLE_HOGPD_MODULE_NAME, lunch_hogp_param());
 
     // Initialize GAP
-    static atm_gap_cbs_t const gap_callbacks = {
-        .ext_adv_ind = gap_ext_adv_ind,
-        .init_cfm = gap_init_cfm,
-        .conn_ind = NULL,
-        .disc_ind = NULL,
-        .pair_req_ind = NULL,
-        .pair_numeric_ind = NULL,
-        .pair_ind = NULL,
-        .conn_param_updated_ind = NULL,
-    };
     atm_gap_start(atm_gap_param_get(), &gap_callbacks);
 }
 
@@ -289,35 +324,6 @@ static void lunch_start_adv(void)
 }
 
 /**
- * @brief Advertisement on. Results in a state machine
- * transition to S_ADV_STARTED.
- * @note Called when the advertisement is turned-on.
- */
-static void lunch_adv_on(void)
-{
-    ATM_LOG(V, "%s", __func__);
-
-    atm_asm_set_state_op(S_TBL_IDX, S_ADV_STARTED, OP_END);
-
-    if(adv_time_csec) {
-        sw_timer_set(tid_adv_timer, adv_time_csec);
-    }
-}
-
-/**
- * @brief Stop advertising. Results in a state machine
- * transition to S_ADV_STOPPING.
- * @note Called when the advertisement sw timer has expired.
- */
-static void lunch_stop_adv(void)
-{
-    ble_err_code_t ret = atm_adv_stop(app_env.adv_act_idx);
-    if (ret != BLE_ERR_NO_ERROR) {
-	    ATM_LOG(E, "%s Fail to stop adv with status %d", __func__, ret);
-    }
-}
-
-/**
  * @brief Get scan parameters and start to scan. Results in a state machine
  * transition to S_SCAN_STARTING.
  * @note Called when the advertisement has been stopped.
@@ -339,9 +345,9 @@ static void lunch_start_scan(void)
  * @note Called when the scan has stopped and tries to recreate
  * new advertisement.
  */
-static void lunch_delete_adv(void)
+static void lunch_stop_adv(void)
 {
-    ble_err_code_t ret = atm_adv_delete(app_env.adv_act_idx);
+    ble_err_code_t ret = atm_adv_stop(app_env.adv_act_idx);
     if (ret != BLE_ERR_NO_ERROR) {
 	    ATM_LOG(E, "%s Fail to delete adv %#x", __func__, ret);
     }
@@ -369,17 +375,15 @@ static state_entry const s_tbl[] = {
     // Start adv after we create adv
 	{S_OP(S_ADV_CREATING, OP_CREATE_ADV_CFM), S_ADV_STARTING, lunch_start_adv},
     // Wait for connection
-	{S_OP(S_ADV_STARTING, OP_START_ADV_CFM), S_ADV_STARTED, lunch_adv_on},
+	{S_OP(S_ADV_STARTING, OP_START_ADV_CFM), S_ADV_STARTED, NULL},
     // We are connected, delete adv
-    {S_OP(S_ADV_STARTED, OP_CONNECTED), S_ADV_DELETING, lunch_delete_adv},
+    {S_OP(S_ADV_STARTED, OP_CONNECTED), S_ADV_STOPPING, lunch_stop_adv},
     // Start the scan after we delete adv
-    {S_OP(S_ADV_DELETING, OP_DELETE_ADV_CFM), S_SCAN_STARTING, lunch_start_scan},
+    {S_OP(S_ADV_STOPPING, OP_STOP_ADV_CFM), S_SCAN_STARTING, lunch_start_scan},
     // Start scan after we are connected
 	{S_OP(S_SCAN_STARTING, OP_START_SCAN_CFM), S_SCAN_ON, NULL},
-    // Scan timeout
-	{S_OP(S_SCAN_ON, OP_SCAN_TIMEOUT), S_SCAN_OFF, lunch_start_adv},
     // Start scan again
-	{S_OP(S_SCAN_OFF, OP_RESTART_SCAN), S_SCAN_STARTING, lunch_start_scan},
+	{S_OP(S_SCAN_ON, OP_RESTART_SCAN), S_SCAN_STARTING, lunch_start_scan},
 };
 
 /**

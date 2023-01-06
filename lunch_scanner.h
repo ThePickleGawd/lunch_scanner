@@ -22,10 +22,9 @@ typedef enum {
     S_ADV_STARTING,
     S_ADV_STARTED,
     S_CONNECTED,
-    S_ADV_DELETING,
+    S_ADV_STOPPING,
     S_SCAN_STARTING,
-    S_SCAN_ON,
-    S_SCAN_OFF
+    S_SCAN_ON
 } lunch_scanner_state_t;
 
 typedef enum {
@@ -34,7 +33,7 @@ typedef enum {
     OP_CREATE_ADV_CFM,
     OP_START_ADV_CFM,
     OP_CONNECTED,
-    OP_DELETE_ADV_CFM,
+    OP_STOP_ADV_CFM,
     OP_CREATE_SCAN_CFM,
     OP_START_SCAN_CFM,
     OP_SCAN_TIMEOUT,
@@ -45,6 +44,7 @@ typedef enum {
 typedef struct {
     __ATM_ADV_CREATE_PARAM_CONST atm_adv_create_t *create;
     __ATM_ADV_START_PARAM_CONST atm_adv_start_t *start;
+    __ATM_ADV_START_PARAM_CONST atm_adv_data_t *adv_data;
     uint8_t scan_act_idx;
     uint8_t adv_act_idx;
 } app_env_t;
