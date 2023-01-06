@@ -24,11 +24,13 @@
 #include "atm_adv.h"
 #include "atm_ble.h"
 #include "atm_co_utils.h"
+#include "ble_hogpd.h"
 
 // My stuff
 #include "lunch_scanner.h"
 #include "lunch_parser.h"
 #include "lunch_manager.h"
+#include "lunch_hogp.h"
 
 ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
 
@@ -60,8 +62,6 @@ static uint16_t adv_time_csec;
 
 static sw_timer_id_t tid_adv_timer;
 
-static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
-
 int tmpCounter = 0;
 double totalDist;
 int maxCount = 5;
@@ -71,19 +71,7 @@ int maxCount = 5;
  *******************************************************************************
  */
 
-static void print_bd_addr(const uint8_t addr[]) {
-    ATM_LOG(D, "%x:%x:%x:%x:%x:%x", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
-}
 
-static bool matches_bd_vendor(const uint8_t addr[]) {
-    // ADDR is in LSB order
-    return addr[5] == vendor_id[0] && addr[4] == vendor_id[1] && addr[3] == vendor_id[2];
-}
-
-/**
- * @brief Callback registered with the GAP layer
- * @note Called by the GAP layer to report advertisement data.
- */
 static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 {
     // Return if report is not complete
@@ -125,16 +113,17 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     ATM_LOG(W, "Checked in %s", lunch_data.student_id);
 }
 
-/**
- * @brief Callback registered with the GAP layer.
- * @note Called after the GAP layer has initialized.
- */
 static void gap_init_cfm(ble_err_code_t status)
 {
     app_env.adv_act_idx = ATM_INVALID_SCANIDX;
     app_env.scan_act_idx = ATM_INVALID_SCANIDX;
 
     atm_asm_move(S_TBL_IDX, OP_GAP_INIT_CFM);   
+}
+
+static void gap_conn_ind()
+{
+
 }
 
 /*
@@ -251,10 +240,18 @@ static void lunch_ble_init(void)
     atm_ble_set_advint(1000); // 1 second interval between different adv channels
     adv_load_nvds();
 
+    atm_gap_prf_reg(BLE_HOGPD_MODULE_NAME, lunch_hogp_param());
+
     // Initialize GAP
     static atm_gap_cbs_t const gap_callbacks = {
         .ext_adv_ind = gap_ext_adv_ind,
         .init_cfm = gap_init_cfm,
+        .conn_ind = NULL,
+        .disc_ind = NULL,
+        .pair_req_ind = NULL,
+        .pair_numeric_ind = NULL,
+        .pair_ind = NULL,
+        .conn_param_updated_ind = NULL,
     };
     atm_gap_start(atm_gap_param_get(), &gap_callbacks);
 }
@@ -410,7 +407,7 @@ static state_entry const s_tbl[] = {
  * @brief Initialize the app data structures and start its state machine
  * @note Called after the platform drivers have initialized
  */
-static rep_vec_err_t user_appm_init(void)
+static rep_vec_err_t user_appm_init(void) 
 {
     atm_asm_init_table(S_TBL_IDX, s_tbl, ARRAY_LEN(s_tbl));
     atm_asm_set_state_op(S_TBL_IDX, S_INIT, OP_MODULE_INIT);

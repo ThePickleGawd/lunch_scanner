@@ -27,5 +27,12 @@ typedef struct {
     uint8_t student_id[STUDENT_ID_ARR_LEN];
 } __PACKED nvds_lunch_data_t;
 
+
+struct keyboard_report_s {
+    uint8_t modifiers;
+    uint8_t reserved;
+    uint8_t keys[REPORT_KEY_ARRAY_SIZE];
+} __PACKED;
+
 void check_in_student(nvds_lunch_data_t data);
 bool student_is_checked_in(nvds_lunch_data_t data);

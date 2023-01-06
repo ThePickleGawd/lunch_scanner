@@ -1,7 +1,7 @@
 /**
  *******************************************************************************
  *
- * @file bas_param_scan.h
+ * @file cfg_gap_params.h
  *
  * @brief Scan configuration
  *
@@ -9,9 +9,27 @@
  *
  *******************************************************************************
  */
-//***<<< Use Configuration Wizard in Context Menu >>>***
 
 #pragma once
+
+// GAP configuration
+
+// Appearance Icon <0x0-0xFFFF>
+#define CFG_GAP_APPEARANCE 961
+// Pairing Mode
+#define CFG_GAP_PAIRING_MODE  (BLE_GAP_PAIRING_SEC_CON | BLE_GAP_PAIRING_LEGACY)
+// Connection interval
+#define CFG_GAP_CONN_INT_MIN 6
+#define CFG_GAP_CONN_INT_MAX 6
+#define CFG_GAP_PERIPH_LATENCY 66
+#define CFG_GAP_CONN_TIMEOUT 300
+#define CFG_GAP_ATT_CFG BLE_GAP_ATT_PERIPH_PREF_CON_PAR_EN_MASK
+
+/*
+===============================================================================
+COPIED FROM BLE_adv_scan!!!
+===============================================================================
+*/
 
 // <c1> Overwrite Default Scan Parameter
 // <i> Overwrite Default Scan Parameter
@@ -114,5 +132,3 @@
 #endif // SCAN_NOT_PERIODIC
 
 #endif // APP_CFG_SCAN_PARAM_SETTING
-
-//***<<< end of configuration section >>>***

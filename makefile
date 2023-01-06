@@ -2,7 +2,7 @@ include ../../user/common.mk
 
 DEBUG := 1
 
-DRIVERS := atm_ble interrupt sw_timer timer
+DRIVERS := atm_ble interrupt sw_timer timer i2c
 LIBRARIES := prf
 
 FRAMEWORK_MODULES := \
@@ -29,7 +29,9 @@ CFLAGS += \
 	-DCFG_ADV_START_PARAM_CONST=0 \
 	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
 	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
-	-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
+	-DBLE_MSG_HANDLER_LIST_SIZE=10 \
+
+#-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
 
 ifdef ROUND_ROBIN
 CFLAGS += -DROUND_ROBIN
@@ -48,11 +50,12 @@ flash_nvds.data += \
 
 # SRC
 SRC_TOP = src
-#SRC_BT = src/bt
+SRC_BT = src/bt
 #SRC_NON_BT = src/non_bt
-INCLUDES += $(SRC_TOP)
+INCLUDES += $(SRC_TOP) $(SRC_BT)
 C_SRCS += \
 	$(SRC_TOP)/lunch_parser.c \
 	$(SRC_TOP)/lunch_manager.c \
+	$(SRC_BT)/lunch_hogp.c \
 
 include $(COMMON_USER_DIR)/framework.mk

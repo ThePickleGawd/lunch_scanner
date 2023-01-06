@@ -34,6 +34,8 @@ ATM_LOG_LOCAL_SETTING("lunch_parser", D);
 #define SCHOOL_ID_LEN 6
 #define STUDENT_ID_LEN 10
 
+static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
+
 /*
  * STATIC FUNCTIONS
  *******************************************************************************
@@ -88,4 +90,13 @@ bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* 
     }
 
     return true;
+}
+
+void print_bd_addr(const uint8_t addr[]) {
+    ATM_LOG(D, "%x:%x:%x:%x:%x:%x", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
+}
+
+bool matches_bd_vendor(const uint8_t addr[]) {
+    // ADDR is in LSB order
+    return addr[5] == vendor_id[0] && addr[4] == vendor_id[1] && addr[3] == vendor_id[2];
 }
