@@ -84,7 +84,7 @@ void lunch_gap_disconnect(void);
  * @param[in] en True for enabling, otherwise for disabling.
  *******************************************************************************
  */
-void lunch_gap_discoverable(bool en);
+void lunch_gap_discoverable(bool enable);
 
 /**
  *******************************************************************************

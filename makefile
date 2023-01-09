@@ -31,22 +31,22 @@ UU_TEST := lunch_scanner
 INCLUDES += .
 
 CFLAGS += \
-	-DCFG_NO_GAP_SEC \
 	-DCFG_NO_GATTC \
 	-DGAP_ADV_PARM_NAME="cfg_adv_params.h" \
-	-DGAP_SCAN_PARM_NAME="cfg_gap_params.h" \
+	-DGAP_PARM_NAME="cfg_gap_params.h" \
 	-DBLE_MSG_HANDLER_LIST_SIZE=10 \
 	-DCFG_S_MAX_ENTRY=2 \
+	-DENABLE_USER_ADV_TIMEOUT \
+	-DENABLE_USER_ADV_PARAM_SETTING \
+	-DENABLE_USER_ADV_DATA_SCANRSP \
+	-DCFG_GAP_ADV_MAX_INST=2 \
+	-DCFG_GAP_SCAN_MAX_INST=1 \
 
 #-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
 
-ifdef ROUND_ROBIN
-CFLAGS += -DROUND_ROBIN
-endif
-
 flash_nvds.data += \
 	02-DEVICE_NAME/ble_adv_scan \
-	11-SLEEP_ENABLE/ret \
+	11-SLEEP_ENABLE/disable \
 	a4-SCAN_SETTING/1s_scan \
 
 # High Duty Cycle Direct Beacon Setting
@@ -58,11 +58,12 @@ flash_nvds.data += \
 # SRC
 SRC_TOP = src
 SRC_BT = src/bt
-#SRC_NON_BT = src/non_bt
-INCLUDES += $(SRC_TOP) $(SRC_BT)
+SRC_NON_BT = src/non_bt
+INCLUDES += $(SRC_TOP) $(SRC_BT) $(SRC_NON_BT)
 C_SRCS += \
-	$(SRC_TOP)/lunch_parser.c \
-	$(SRC_TOP)/lunch_manager.c \
+	$(SRC_NON_BT)/lunch_parser.c \
+	$(SRC_NON_BT)/lunch_manager.c \
+	$(SRC_BT)/lunch_gap.c \
 	$(SRC_BT)/lunch_hogp.c \
 
 include $(COMMON_USER_DIR)/profiles.mk

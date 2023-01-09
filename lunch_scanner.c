@@ -25,6 +25,7 @@
 #include "atm_ble.h"
 #include "atm_co_utils.h"
 #include "ble_hogpd.h"
+#include "app_diss.h"
 
 // My stuff
 #include "app_config.h"
@@ -67,14 +68,16 @@ static sw_timer_id_t tid_lunch_idle;
 
 static void lunch_idle_timer_msg_ind(sw_timer_id_t idx, void const *ctx)
 {
-    if (kbd_hogp_state() == BLE_HOGPD_READY) {
+    ATM_LOG(D, "IDLE timer");
+
+    if (lunch_hogp_state() == BLE_HOGPD_READY) {
 	    ATM_LOG(N, "idle too long timeout\n");
         lunch_asm_move(OP_DISCONNING);
-    } else if (kbd_hogp_state() == BLE_HOGPD_ENABLED) {
+    } else if (lunch_hogp_state() == BLE_HOGPD_ENABLED) {
 	    ATM_LOG(N, "HID not ready for a long time\n");
         lunch_asm_move(OP_DISCONNING);
     } else {
-	    kbd_gap_discoverable(false);
+	    lunch_gap_discoverable(false);
     }
 
 }
@@ -88,6 +91,7 @@ static void lunch_s_init(void)
 {
     // Register Profiles
     atm_gap_prf_reg(BLE_HOGPD_MODULE_NAME, lunch_hogp_param());
+    atm_gap_prf_reg(BLE_DISS_MODULE_NAME, app_dis_param());
 
     // Init GAP
     lunch_gap_init();
@@ -98,6 +102,7 @@ static void lunch_s_init(void)
 
 static void lunch_s_connected(void)
 {
+    ATM_LOG(D, "lunch connected callback");
     // Set connection ready timeout
     sw_timer_set(tid_lunch_idle, KBD_CONNECTION_READY_TIMEOUT_CS);
 }
@@ -179,6 +184,7 @@ static state_entry const s_tbl[] = {
  */
 
 void lunch_asm_move(ASM_O OP) {
+    ATM_LOG(V, "Lunch OP: %d", OP);
     atm_asm_move(S_TBL_IDX, OP);
 }
 

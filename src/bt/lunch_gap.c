@@ -3,6 +3,7 @@
 #include "cfg_gap_params.h"
 
 // Drivers
+#include <math.h>
 #include "atm_gap_param.h"
 #include "atm_scan_param.h"
 #include "atm_adv_param.h"
@@ -20,6 +21,7 @@
 #include "lunch_hogp.h"
 #include "lunch_gap.h"
 
+ATM_LOG_LOCAL_SETTING("lunch_gap", D);
 
 /*
  * DEFINES & VARIABLES
@@ -43,13 +45,22 @@ double totalDist;
 int maxCount = 5;
 
 /*
+ * FUNCTION DECLARATIONS
+ *******************************************************************************
+ */
+
+static void lunch_gap_update_bond_information(void);
+
+/*
  * GAP ADV CONFIRMATION CALLBACKS
  *******************************************************************************
  */
 
 static void lunch_start_adv(void)
 {
-    ble_err_code_t ret = atm_adv_start(adv_act_idx, atm_adv_start_param_get(is_pairing));
+    ATM_LOG(V, "%s", __func__);
+
+    ble_err_code_t ret = atm_adv_start(adv_act_idx, atm_adv_start_param_get(is_pairing ? ADV1_PAIR : ADV0_RECONN));
     if (ret != BLE_ERR_NO_ERROR) {
         ATM_LOG(E, "%s Fail to start adv with status %d", __func__, ret);
     }
@@ -57,16 +68,21 @@ static void lunch_start_adv(void)
 
 static void lunch_gap_adv_create_cfm(uint8_t idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     if(!is_pairing && (atm_adv_create_param_get(ADV0_RECONN)->adv_param.prop & ADV_PROP_DIRECTED_BIT)) {
         adv_act_idx = idx;
         lunch_start_adv();
     } else {
-        atm_adv_set_adv_data(adv_act_idx, atm_adv_advdata_param_get(is_pairing ? ADV1_PAIR : ADV0_RECONN));
+        adv_act_idx = idx;
+        atm_adv_set_adv_data(adv_act_idx, atm_adv_advdata_param_get(is_pairing));
     }
 }
 
 static void lunch_gap_set_adv_data_cfm(uint8_t idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     if(!is_pairing) {
         lunch_start_adv();
     } else {
@@ -76,11 +92,15 @@ static void lunch_gap_set_adv_data_cfm(uint8_t idx, ble_err_code_t status)
 
 static void lunch_gap_set_scan_data_cfm(uint8_t idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     lunch_start_adv();
 }
 
 static void lunch_gap_adv_start_cfm(uint8_t idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     ASSERT_INFO(status == BLE_ERR_NO_ERROR, idx, status);
 
     lunch_gap_asm_move(is_pairing ? GAP_OP_ADV1ING : GAP_OP_ADV0ING);
@@ -88,6 +108,8 @@ static void lunch_gap_adv_start_cfm(uint8_t idx, ble_err_code_t status)
 
 static void lunch_gap_adv_stop_ind(uint8_t idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     if (idx != GAP_INVALID_CONIDX) {
         if (status == BLE_GAP_ERR_TIMEOUT) {
             lunch_gap_asm_move(GAP_OP_ADV_STOP_TOUT);
@@ -100,6 +122,11 @@ static void lunch_gap_adv_stop_ind(uint8_t idx, ble_err_code_t status)
 // adv callback
 static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
+    ATM_LOG(D, "%s: act_idx=%d adv_state=%d", __func__, act_idx, state);
+
+
     switch (state) {
 	case ATM_ADV_CREATING:
 	case ATM_ADV_ADVDATA_SETTING:
@@ -138,6 +165,8 @@ static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_cod
 
 static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 {
+    ATM_LOG(V, "%s", __func__);
+
     // Return if report is not complete
     if(!(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT)) return;
 
@@ -179,25 +208,33 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 
 static void gap_init_cfm(ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     if (status != BLE_ERR_NO_ERROR) {
         ASSERT_ERR(0);
     }
 
-    lunch_gap_asm_move(GAP_OP_INITED);
     atm_ble_set_txpwr_max(CFG_ADV0_CREATE_MAX_TX_POWER);
+    lunch_gap_asm_move(GAP_OP_INITED);
 }
 
 static void gap_conn_ind(uint8_t conidx, atm_connect_info_t *param)
 {
+    ATM_LOG(V, "%s", __func__);
+
+    cur_lidx = conidx;
+
     atm_gap_connect_accept(conidx);
     atm_ble_set_con_txpwr(conidx, 0);
     atm_gap_print_conn_param(param);
 
-    lunch_gap_asm_move(OP_CONNECTED);
+    lunch_gap_asm_move(GAP_OP_CONNECTED);
 }
 
-static void gap_disc_ind(uint8_t conidx, ble_gap_ind_discon_t *param)
+static void gap_disc_ind(uint8_t conidx, ble_gap_ind_discon_t const *param)
 {
+    ATM_LOG(V, "%s", __func__);
+
     // Possibility of is_pairing from true to false since we just bond and peer
     // turn off bluetooth or disconnect intentionally
     if (is_pairing) {
@@ -209,6 +246,8 @@ static void gap_disc_ind(uint8_t conidx, ble_gap_ind_discon_t *param)
 
 static void lunch_gap_pair_rsp(uint8_t conidx, bool accept, ble_gap_auth_t auth_req)
 {
+    ATM_LOG(V, "%s", __func__);
+
      ble_gap_sec_pairing_param_t rsp = {
 	    .auth = (auth_req & BLE_GAP_AUTH_SEC_CON) ?
 	        BLE_GAP_AUTH_REQ_NO_MITM_SEC_CON_BOND :
@@ -225,6 +264,8 @@ static void lunch_gap_pair_rsp(uint8_t conidx, bool accept, ble_gap_auth_t auth_
 
 static void cb_already_bonded(uint8_t conidx, int8_t bond_idx, void const *ctx)
 {
+    ATM_LOG(V, "%s", __func__);
+
     bool accept = true;
     if (bond_idx == bond_slot) {
         ATM_LOG(N, "Re-Pairing");
@@ -244,12 +285,16 @@ static void cb_already_bonded(uint8_t conidx, int8_t bond_idx, void const *ctx)
 
 static void gap_pair_req_ind(uint8_t conidx, ble_gap_auth_t auth_req)
 {
+    ATM_LOG(V, "%s", __func__);
+
     auth_val = auth_req;
     ble_gap_sec_check_bonded(conidx, cb_already_bonded, NULL);
 }
 
 static void gap_pair_numeric_ind(uint8_t conidx, uint32_t number)
 {
+    ATM_LOG(V, "%s", __func__);
+
     ATM_LOG(D, "nc data = %" PRIu32, number);
 
     // Always confirm
@@ -258,6 +303,8 @@ static void gap_pair_numeric_ind(uint8_t conidx, uint32_t number)
 
 static void gap_pair_ind(uint8_t conidx, ble_gap_ind_le_pair_end_t const *ind)
 {
+    ATM_LOG(V, "%s", __func__);
+
     if (!ind->reason) {
         lunch_asm_move(OP_PAIR_SUCCESS);
     } else {
@@ -267,12 +314,14 @@ static void gap_pair_ind(uint8_t conidx, ble_gap_ind_le_pair_end_t const *ind)
 
 static void lunch_gap_conn_param_updated_ind(uint8_t conidx)
 {
+    ATM_LOG(V, "%s", __func__);
+
     // Print debug info
     atm_connect_info_t *info = atm_gap_get_connect_info(conidx);
     atm_gap_print_conn_param(info);
 
     if (force_conn_param) {
-	    atm_gap_connect_param_nego(cur_lidx, &param_nego);
+	    lunch_gap_nego_parameter();
     }
 }
 
@@ -293,21 +342,25 @@ static atm_gap_cbs_t const gap_callbacks = {
 
 static void scan_create_cfm(uint8_t inst_idx, ble_err_code_t status)
 {
-    scan_act_idx = inst_idx;
+    ATM_LOG(V, "%s", __func__);
 
-    lunch_asm_move(GAP_OP_INITED);
+    scan_act_idx = inst_idx;
 }
 
 static void scan_start_cfm(uint8_t inst_idx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     scan_act_idx = inst_idx;
     ASSERT_INFO(status == BLE_ERR_NO_ERROR, inst_idx, status);
-    lunch_gap_asm_move(GAP_OP_START_SCAN);
+    
+    lunch_gap_asm_move(GAP_OP_SCAN_STARTED);
+    lunch_asm_move(OP_SCAN_STARTED);
 }
 
 static void scan_stop_ind(uint8_t inst_idx, ble_err_code_t status)
 {
-    ATM_LOG(D, "Scan timeout - trying to restart scan");
+    ATM_LOG(V, "%s - Restarting scan...", __func__);
 
     lunch_gap_asm_move(GAP_OP_SCAN_TIMEOUT);
     lunch_asm_move(OP_SCAN_TIMEOUT);
@@ -315,6 +368,8 @@ static void scan_stop_ind(uint8_t inst_idx, ble_err_code_t status)
 
 static void lunch_create_scan(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     // Scan callbacks
     static atm_scan_cbs_t const scan_callbacks = {
         .scan_create_cfm = scan_create_cfm,
@@ -327,8 +382,10 @@ static void lunch_create_scan(void)
     }
 }
 
-void lunch_start_scan(void)
+static void lunch_start_scan(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     atm_scan_params_t start_params;
     atm_get_nvds_scan_params(&start_params);
 
@@ -338,22 +395,15 @@ void lunch_start_scan(void)
     }
 }
 
-
-//================================================================
-
-static void lunch_gap_update_bond_information(void)
-{
-    bond_slot = ble_gap_sec_get_last_bond_index();
-    if(bond_slot == BLE_GAP_INVALID_BOND) {
-        bond_slot = 0;
-    }
-
-    // Check whether we should pair or reconnect
-    is_pairing = !((1 << bond_slot) & ble_gap_sec_get_bond_mask());
-}
+/*
+ * STATE MACHINE
+ *******************************************************************************
+ */
 
 static void lunch_gap_s_init(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     lunch_gap_update_bond_information();
 
     if (!is_pairing) {
@@ -384,12 +434,15 @@ static void lunch_gap_s_disc(void) { lunch_asm_move(OP_DISCONNED);}
 
 static void lunch_gap_s_conn(void)
 {
+    ATM_LOG(D, "Connected callback");
     atm_gap_lower_slave_latency_locally(cur_lidx, 0);
     lunch_asm_move(OP_CONNECTED);
 }
 
 static void lunch_gap_s_start_scan(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     lunch_start_scan();
 }
 
@@ -417,6 +470,8 @@ static state_entry const gap_s_tbl[] = {
 
 void lunch_gap_init(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     // Start GAP
     atm_gap_start(atm_gap_param_get(), &gap_callbacks);
 
@@ -426,9 +481,40 @@ void lunch_gap_init(void)
 }
 
 /*
- * PUBLIC FUNCTIONS
+ * GAP FUNCTIONS
  *******************************************************************************
  */
+
+static void lunch_gap_update_bond_information(void)
+{
+    ATM_LOG(V, "%s", __func__);
+
+    bond_slot = ble_gap_sec_get_last_bond_index();
+    if(bond_slot == BLE_GAP_INVALID_BOND) {
+        bond_slot = 0;
+    }
+
+    // Check whether we should pair or reconnect
+    is_pairing = !((1 << bond_slot) & ble_gap_sec_get_bond_mask());
+}
+
+static void lunch_gap_reconnecting(void)
+{
+    ATM_LOG(V, "%s", __func__);
+
+    if (atm_asm_get_current_state(GAP_S_TBL_IDX) == GAP_S_IDLE) {
+	    atm_adv_start(adv_act_idx, atm_adv_start_param_get(ADV0_RECONN));
+    }
+}
+
+static void lunch_gap_pairing(void)
+{
+    ATM_LOG(V, "%s", __func__);
+
+    if (atm_asm_get_current_state(GAP_S_TBL_IDX) == GAP_S_IDLE) {
+	    atm_adv_start(adv_act_idx, atm_adv_start_param_get(ADV1_PAIR));
+    }
+}
 
 void lunch_gap_discoverable(bool enable)
 {
@@ -444,13 +530,15 @@ void lunch_gap_discoverable(bool enable)
     if ((atm_asm_get_current_state(GAP_S_TBL_IDX) == GAP_S_ADV1ING ||
 	atm_asm_get_current_state(GAP_S_TBL_IDX) == GAP_S_ADV0ING)) {
 	atm_adv_stop(adv_act_idx);
-	lunch_gap_transition(GAP_OP_ADV_STOPPING);
+	lunch_gap_asm_move(GAP_OP_ADV_STOPPING);
     }
 
 }
 
 void lunch_gap_disconnect(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     atm_gap_disconnect(cur_lidx, BLE_HCI_ERR_REMOTE_USER_TERM_CON);
 }
 
@@ -464,21 +552,25 @@ static atm_gap_param_nego_t const param_nego = {
     .check_result = KBD_PARAM_NEGO_EACH_TIMEOUT_CS,
     .delay = KBD_PARAM_NEGO_DELAY_S,
     .target = &(ble_gap_conn_param_t const) {
-	.intv_min = CFG_GAP_CONN_INT_MIN,
-	.intv_max = CFG_GAP_CONN_INT_MAX,
-	.latency = CFG_GAP_PERIPH_LATENCY,
-	.time_out = CFG_GAP_CONN_TIMEOUT,
+	    .intv_min = CFG_GAP_CONN_INT_MIN,
+	    .intv_max = CFG_GAP_CONN_INT_MAX,
+	    .latency = CFG_GAP_PERIPH_LATENCY,
+	    .time_out = CFG_GAP_CONN_TIMEOUT,
     }
 };
 
 void lunch_gap_nego_parameter(void)
 {
+    ATM_LOG(V, "%s", __func__);
+
     force_conn_param = true;
     atm_gap_connect_param_nego(cur_lidx, &param_nego);
 }
 
 static void lunch_gap_param_nego_cfm(uint8_t conidx, ble_err_code_t status)
 {
+    ATM_LOG(V, "%s", __func__);
+
     ATM_LOG(N, "param nego = %#x", status);
     if ((status == BLE_ERR_NO_ERROR) ||
 	(status == BLE_HCI_ERR_UNACCEPTABLE_CONN_PARAM) ||
@@ -491,17 +583,23 @@ static void lunch_gap_param_nego_cfm(uint8_t conidx, ble_err_code_t status)
 
 void lunch_gap_local_slave_latency(bool disable)
 {
+    ATM_LOG(V, "%s", __func__);
+
     atm_gap_lower_slave_latency_locally(cur_lidx,
 	disable ? 0 : atm_gap_get_connect_info(cur_lidx)->con_latency);
 }
 
 static void lunch_gap_delete_bond_callback(uint8_t conidx, int8_t bond_idx, void const *ctx)
 {
+    ATM_LOG(V, "%s", __func__);
+
     platform_reset(RESET_NO_ERROR);
 }
 
 void lunch_gap_remove_current_bond(void)
 {
+    ATM_LOG(V, "%s", __func__);
+    
     ble_gap_bdaddr_t bdaddr;
     ble_gap_sec_get_last_bond_address(&bdaddr);
     ble_gap_sec_remove_bond(&bdaddr, lunch_gap_delete_bond_callback, NULL);
@@ -509,5 +607,6 @@ void lunch_gap_remove_current_bond(void)
 
 void lunch_gap_asm_move(ASM_O OP)
 {
+    ATM_LOG(V, "Lunch Gap OP: %d", OP);
     atm_asm_move(GAP_S_TBL_IDX, OP);
 }

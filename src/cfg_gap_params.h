@@ -26,11 +26,6 @@
 #define CFG_GAP_ATT_CFG BLE_GAP_ATT_PERIPH_PREF_CON_PAR_EN_MASK
 
 #define CFG_GAP_ROLE BLE_GAP_ROLE_ALL
-#define CFG_GAP_ADV_MAX_INST 1
-#define CFG_GAP_SCAN_MAX_INST 1
-#define CFG_ADV_CREATE_PARAM_CONST 0
-#define CFG_ADV_START_PARAM_CONST 0
-#define CFG_ADV_DATA_PARAM_CONST 0
 
 /*
 ===============================================================================

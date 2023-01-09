@@ -10,10 +10,15 @@
  *******************************************************************************
  */
 
-#include "lunch_manager.h"
-#include "khash.h"
+// Drivers
 #include "atm_log.h"
 #include "base_addr.h"
+#include "usb_hid_keys.h"
+
+// My stuff
+#include "khash.h"
+#include "lunch_manager.h"
+#include "lunch_hogp.h"
 
 /*
  * DEFINES
@@ -38,6 +43,28 @@ static khash_t(str) *hash_map;
  *******************************************************************************
  */
 
+static int get_key_code(uint8_t num)
+{
+    switch (num) {
+        case '0': return KEY_0;
+        case '1': return KEY_1;
+        case '2': return KEY_2;
+        case '3': return KEY_3;
+        case '4': return KEY_4;
+        case '5': return KEY_5;
+        case '6': return KEY_6;
+        case '7': return KEY_7;
+        case '8': return KEY_8;
+        case '9': return KEY_9;
+        default: {
+            ATM_LOG(E, "Error, unknown key");
+            break;
+        }
+    }
+
+    return -1;
+}
+
 void check_in_student(nvds_lunch_data_t data) {
     // Place in hash map
     int ret;
@@ -48,14 +75,12 @@ void check_in_student(nvds_lunch_data_t data) {
     for(int i = 0; i < STUDENT_ID_ARR_LEN; i++) {
         if(data.student_id[i] == 0) break;
 
-        struct keyboard_report_s report = {
-            .modifiers = 0,
-            .reserved = 0,
-            .keys = {data.student_id[i], 0, 0, 0, 0, 0}
-        };
-        ATM_LOG(D, "TYPING: %d", report.keys[0]);
-        //i2c_write(0x20, (uint8_t *) &report, sizeof(report));
+        lunch_hogp_send_report(get_key_code(data.student_id[i]), true);
+        lunch_hogp_send_report(get_key_code(data.student_id[i]), false);
     }
+
+    lunch_hogp_send_report(KEY_ENTER, true);
+    lunch_hogp_send_report(KEY_ENTER, false);
 }
 
 bool student_is_checked_in(nvds_lunch_data_t data) {

@@ -17,6 +17,7 @@
 #include "atm_debug.h"
 #include "atm_gap_param.h"
 #include "lunch_hogp.h"
+#include "lunch_scanner.h"
 
 ATM_LOG_LOCAL_SETTING("lunch_hogp", N);
 
@@ -168,8 +169,7 @@ static void lunch_hogp_state_ind(uint8_t conidx, ble_hogpd_state_t last)
 
     lunch_conidx = conidx;
     if (ble_hogpd_get_peer_info()->state == BLE_HOGPD_READY) {
-	//lunch_mmi_transition(MMI_OP_HID_READY);
-    ATM_LOG(E, "TODO: I need to implement something here");
+	    lunch_asm_move(OP_HID_READY);
     }
 }
 
