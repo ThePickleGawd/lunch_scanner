@@ -71,8 +71,8 @@ static void lunch_idle_timer_msg_ind(sw_timer_id_t idx, void const *ctx)
     ATM_LOG(D, "IDLE timer");
 
     if (lunch_hogp_state() == BLE_HOGPD_READY) {
-	    ATM_LOG(N, "idle too long timeout\n");
-        lunch_asm_move(OP_DISCONNING);
+	    ATM_LOG(N, "Ignore idle cuz I don't wanna disconnect!");
+        //lunch_asm_move(OP_DISCONNING);
     } else if (lunch_hogp_state() == BLE_HOGPD_ENABLED) {
 	    ATM_LOG(N, "HID not ready for a long time\n");
         lunch_asm_move(OP_DISCONNING);

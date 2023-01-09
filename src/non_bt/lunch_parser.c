@@ -93,7 +93,7 @@ bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* 
 }
 
 void print_bd_addr(const uint8_t addr[]) {
-    ATM_LOG(D, "%x:%x:%x:%x:%x:%x", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
+    ATM_LOG(V, "%x:%x:%x:%x:%x:%x", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
 }
 
 bool matches_bd_vendor(const uint8_t addr[]) {

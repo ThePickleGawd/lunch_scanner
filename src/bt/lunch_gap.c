@@ -40,10 +40,6 @@ static uint8_t auth_val;
 
 static int8_t bond_slot;
 
-int tmpCounter = 0;
-double totalDist;
-int maxCount = 5;
-
 /*
  * FUNCTION DECLARATIONS
  *******************************************************************************
@@ -163,6 +159,7 @@ static void adv_state_change(atm_adv_state_t state, uint8_t act_idx, ble_err_cod
  *******************************************************************************
  */
 
+
 static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 {
     ATM_LOG(V, "%s", __func__);
@@ -175,18 +172,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
 
     print_bd_addr(ind->trans_addr.addr.addr);
 
-    // TODO: something with RSSI and close enough and average over small time interval for accuracy
-    double measuredPower = -80;
-    double N = 2;
-    double distance = pow(10, (measuredPower - (double)ind->rssi) / (10 * N));
-    ATM_LOG(D, "RSSI: %d Distance: %f", ind->rssi, distance);
-    if(tmpCounter++ < maxCount) {
-        totalDist += distance;
-    } else {
-        ATM_LOG(D, "Avg Distance is %f", (totalDist / maxCount));
-        totalDist = 0;
-        tmpCounter = 0;
-    }
+    ATM_LOG(D, "RSSI: %d", ind->rssi);
     
     // Parse lunch data
     nvds_lunch_data_t lunch_data = {0};
@@ -198,7 +184,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     }
 
     if(student_is_checked_in(lunch_data)) {
-        ATM_LOG(D, "Student is already checked in");
+        ATM_LOG(V, "Student is already checked in");
         return;
     }
 
