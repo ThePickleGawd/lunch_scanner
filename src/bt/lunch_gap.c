@@ -183,6 +183,8 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
         return;
     }
 
+    receive_rssi(lunch_data, ind->rssi);
+
     if(student_is_checked_in(lunch_data)) {
         ATM_LOG(V, "Student is already checked in");
         return;
@@ -451,6 +453,7 @@ static state_entry const gap_s_tbl[] = {
     {S_OP(GAP_S_CONNECTED, GAP_OP_ADV_STOP), GAP_S_CONNECTED, NULL},
     {S_OP(GAP_S_CONNECTED, GAP_OP_START_SCAN), GAP_S_STARTING_SCAN, lunch_gap_s_start_scan},
     {S_OP(GAP_S_STARTING_SCAN, GAP_OP_SCAN_STARTED), GAP_S_SCANNING, NULL},
+    {S_OP(GAP_S_SCANNING, GAP_OP_DISCONNECTED), GAP_S_IDLE, lunch_gap_s_disc},
     {S_OP(GAP_S_SCANNING, GAP_OP_SCAN_TIMEOUT), GAP_S_CONNECTED, NULL},
 };
 

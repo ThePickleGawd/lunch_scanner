@@ -175,6 +175,7 @@ static state_entry const s_tbl[] = {
     {S_OP(S_DISCONNING, OP_DISCONNED), S_IDLE, lunch_s_disconnected},
     // Scan after HID_READY
     {S_OP(S_HID_READY, OP_SCAN_STARTED), S_SCANNING, NULL},
+    {S_OP(S_SCANNING, OP_DISCONNED), S_IDLE, lunch_s_disc_restart},
     {S_OP(S_SCANNING, OP_SCAN_TIMEOUT), S_HID_READY, lunch_s_scan_timeout},
 };
 

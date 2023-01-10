@@ -19,6 +19,7 @@
 #include "khash.h"
 #include "lunch_manager.h"
 #include "lunch_hogp.h"
+#include "lunch_helper.h"
 
 /*
  * DEFINES
@@ -27,7 +28,8 @@
 
 
 ATM_LOG_LOCAL_SETTING("lunch_manager", D);
-KHASH_SET_INIT_STR(str)
+KHASH_SET_INIT_STR(check_in)
+KHASH_MAP_INIT_STR(rssi, rssi_array_t)
 
 #define I2C_CLK_100K 100000
 
@@ -36,39 +38,18 @@ KHASH_SET_INIT_STR(str)
  *******************************************************************************
  */
 
-static khash_t(str) *hash_map;
+static khash_t(check_in) *check_in_set;
+static khash_t(rssi) *rssi_map;
 
 /*
  * FUNCTIONS
  *******************************************************************************
  */
 
-static int get_key_code(uint8_t num)
-{
-    switch (num) {
-        case '0': return KEY_0;
-        case '1': return KEY_1;
-        case '2': return KEY_2;
-        case '3': return KEY_3;
-        case '4': return KEY_4;
-        case '5': return KEY_5;
-        case '6': return KEY_6;
-        case '7': return KEY_7;
-        case '8': return KEY_8;
-        case '9': return KEY_9;
-        default: {
-            ATM_LOG(E, "Error, unknown key");
-            break;
-        }
-    }
-
-    return -1;
-}
-
 void check_in_student(nvds_lunch_data_t data) {
     // Place in hash map
     int ret;
-    kh_put(str, hash_map, (char *) &data.student_id[0], &ret);
+    kh_put(check_in, check_in_set, (char *) &data.student_id[0], &ret);
     if(!ret) ATM_LOG(E, "Error %d - Something with khash", ret);
 
     // Send to school lunch software via I2C to FT260
@@ -84,11 +65,41 @@ void check_in_student(nvds_lunch_data_t data) {
 }
 
 bool student_is_checked_in(nvds_lunch_data_t data) {
-    khiter_t k = kh_get(str, hash_map, (char *) &data.student_id[0]);
-    return !(k == kh_end(hash_map));
+    khiter_t k = kh_get(check_in, check_in_set, (char *) &data.student_id[0]);
+    return !(k == kh_end(check_in_set));
+}
+
+void receive_rssi(nvds_lunch_data_t data, int rssi)
+{
+    khiter_t k = kh_get(rssi, rssi_map, (char *) &data.student_id[0]);
+    if (k == kh_end(rssi_map)) {
+        // New entry in rssi map
+        int ret;
+        khiter_t iter = kh_put(rssi, rssi_map, (char *) &data.student_id[0], &ret);
+
+        // Place new rssi array entry into map
+        rssi_array_t rssi_arr;
+        rssi_arr.array[0] = rssi;
+        rssi_arr.size = 1;
+        kh_value(rssi_map, iter) = rssi_arr;
+    } else {
+        // Place rssi at end of array and update size
+        rssi_array_t *rssi_arr = &kh_value(rssi_map, k);
+        rssi_arr->array[rssi_arr->size++] = rssi;
+
+        // Check if rssi array is full once done
+        if(rssi_arr->size >= MAX_RSSI_ARR_LEN) {
+            // Print median RSSI
+            ATM_LOG(D, "Median RSSI is %d", (int)get_rssi_median(rssi_arr));
+            rssi_arr->size = 0;
+
+            // TODO: if median RSSI passes threshold, then check in student
+        }
+    }
 }
 
 __attribute__((constructor))
 static void init_lunch_manager(void) {
-    hash_map = kh_init(str);
+    check_in_set = kh_init(check_in);
+    rssi_map = kh_init(rssi);
 }

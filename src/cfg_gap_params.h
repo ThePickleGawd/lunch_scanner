@@ -93,7 +93,7 @@ COPIED FROM BLE_adv_scan!!!
 
 // <c1> Scan continuously
 // <i> Scan continuously (will ignore SCAN0_DURATION parameter)
-//#define SCAN_CONTINOUS
+#define SCAN_CONTINUOUS
 // </c>
 
 // <o> Scan duration (uint: ms)
@@ -121,7 +121,7 @@ COPIED FROM BLE_adv_scan!!!
 #define SCAN0_START_CODED_WINDOW ((uint16_t)(SCAN0_CODED_WINDOWS/625))
 #define CFG_SCAN0_START_CODED_PARAM SCAN0_START_CODED_INTERVAL, SCAN0_START_CODED_WINDOW
 
-#ifdef SCAN_CONTINOUS
+#ifdef SCAN_CONTINUOUS
 #define CFG_SCAN0_START_DURATION 0
 #else // SCAN_CONTINUOUS
 #define CFG_SCAN0_START_DURATION ((uint16_t)(SCAN0_DURATION/10))

@@ -47,7 +47,8 @@ CFLAGS += \
 flash_nvds.data += \
 	02-DEVICE_NAME/ble_adv_scan \
 	11-SLEEP_ENABLE/disable \
-	a4-SCAN_SETTING/1s_scan \
+	
+#a4-SCAN_SETTING/1s_scan \
 
 # High Duty Cycle Direct Beacon Setting
 # flash_nvds.data += \
@@ -63,6 +64,7 @@ INCLUDES += $(SRC_TOP) $(SRC_BT) $(SRC_NON_BT)
 C_SRCS += \
 	$(SRC_NON_BT)/lunch_parser.c \
 	$(SRC_NON_BT)/lunch_manager.c \
+	$(SRC_NON_BT)/lunch_helper.c \
 	$(SRC_BT)/lunch_gap.c \
 	$(SRC_BT)/lunch_hogp.c \
 
