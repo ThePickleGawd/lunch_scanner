@@ -27,9 +27,9 @@
  */
 
 
-ATM_LOG_LOCAL_SETTING("lunch_manager", D);
+ATM_LOG_LOCAL_SETTING("lunch_manager", V);
 KHASH_SET_INIT_INT(check_in)
-KHASH_MAP_INIT_INT(rssi, rssi_array_t)
+KHASH_MAP_INIT_INT(rssi, rssi_profile_t)
 
 #define I2C_CLK_100K 100000
 
@@ -57,7 +57,7 @@ static int student_id_to_int(nvds_lunch_data_t data)
     return num;
 }
 
-void check_in_student(nvds_lunch_data_t data) {
+static void check_in_student(nvds_lunch_data_t data) {
     // Place in hash map
     int ret;
     kh_put(check_in, check_in_set, student_id_to_int(data), &ret);
@@ -74,6 +74,8 @@ void check_in_student(nvds_lunch_data_t data) {
 
     lunch_hogp_send_report(KEY_ENTER, true);
     lunch_hogp_send_report(KEY_ENTER, false);
+
+    ATM_LOG(V, "Checked in %s", data.student_id);
 }
 
 bool student_is_checked_in(nvds_lunch_data_t data) {
@@ -81,32 +83,43 @@ bool student_is_checked_in(nvds_lunch_data_t data) {
     return !(k == kh_end(check_in_set));
 }
 
-void receive_rssi(nvds_lunch_data_t data, int rssi)
+void receive_lunch_data(nvds_lunch_data_t data, int rssi)
 {
+    if(student_is_checked_in(data)) return;
+    
+    ATM_LOG(V, "Receiving ID: %s with RSSI: %d", data.student_id, rssi);
+
     khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
     if (k == kh_end(rssi_map)) {
+        // Don't create entry if rssi does not pass threshold
+        if(rssi < RSSI_THRESHOLD) return;
+
         // New entry in rssi map
         int ret;
         khiter_t iter = kh_put(rssi, rssi_map, student_id_to_int(data), &ret);
 
-        // Place new rssi array entry into map
-        rssi_array_t rssi_arr;
-        rssi_arr.array[0] = rssi;
-        rssi_arr.size = 1;
-        kh_value(rssi_map, iter) = rssi_arr;
+        // Place new rssi value in map
+        rssi_profile_t rssi_profile = {
+            .pass_cnt = 1,
+            .leeway = 0
+        };
+        kh_value(rssi_map, iter) = rssi_profile;
     } else {
-        // Place rssi at end of array and update size
-        rssi_array_t *rssi_arr = &kh_value(rssi_map, k);
-        rssi_arr->array[rssi_arr->size++] = rssi;
-
-        // Check if rssi array is full once done
-        if(rssi_arr->size >= MAX_RSSI_ARR_LEN) {
-            // Print median RSSI
-            ATM_LOG(D, "Median RSSI is %d", (int)get_rssi_median(rssi_arr));
-            rssi_arr->size = 0;
-
-            // TODO: if median RSSI passes threshold, then check in student
+        // RSSI profile already in map
+        rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
+        
+        if(rssi < RSSI_THRESHOLD) {
+            if(++(rssi_profile->leeway) > RSSI_LEEWAY_MAX) {
+                rssi_profile->pass_cnt = 0;
+                rssi_profile->leeway = 0;
+            }
+        } else {
+            if(++(rssi_profile->pass_cnt) >= RSSI_PASS_REQUIREMENT) {
+                check_in_student(data);
+                kh_del(rssi, rssi_map, k);
+            }
         }
+        
     }
 }
 

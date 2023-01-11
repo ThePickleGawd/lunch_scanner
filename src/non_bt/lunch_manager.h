@@ -15,9 +15,14 @@
 #include <inttypes.h>
 #include "arch.h"
 
+// Lunch Data Setting
 #define SCHOOL_ID_ARR_LEN 6
 #define STUDENT_ID_ARR_LEN 10
-#define MAX_RSSI_ARR_LEN 10
+
+// RSSI Setting
+#define RSSI_THRESHOLD -75
+#define RSSI_PASS_REQUIREMENT 3
+#define RSSI_LEEWAY_MAX 1
 
 /**
  * @brief NVDS Lunch Data Type
@@ -29,13 +34,20 @@ typedef struct {
 } __PACKED nvds_lunch_data_t;
 /**
  * @brief RSSI Array Type
- * @note Values at index greater than size can be anything, but it doesn' matter
+ * @note Values at index greater than size can be anything, but it doesn't matter
  */
 typedef struct {
-    int_fast16_t array[MAX_RSSI_ARR_LEN];
-    uint16_t size;
-} rssi_array_t;
+    int pass_cnt;
+    int leeway;
+} rssi_profile_t;
 
-void check_in_student(nvds_lunch_data_t data);
+/**
+ * @brief Is student already checked in?
+ * @returns true if checked in. Else false
+ */
 bool student_is_checked_in(nvds_lunch_data_t data);
-void receive_rssi(nvds_lunch_data_t data, int rssi);
+
+/**
+ * @brief Send lunch data to lunch_manager
+ */
+void receive_lunch_data(nvds_lunch_data_t data, int rssi);

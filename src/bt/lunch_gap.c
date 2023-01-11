@@ -171,8 +171,6 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     if(!matches_bd_vendor(ind->trans_addr.addr.addr)) return;
 
     print_bd_addr(ind->trans_addr.addr.addr);
-
-    ATM_LOG(D, "RSSI: %d", ind->rssi);
     
     // Parse lunch data
     nvds_lunch_data_t lunch_data = {0};
@@ -183,15 +181,7 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
         return;
     }
 
-    receive_rssi(lunch_data, ind->rssi);
-
-    if(student_is_checked_in(lunch_data)) {
-        ATM_LOG(V, "Student is already checked in");
-        return;
-    }
-
-    check_in_student(lunch_data);
-    ATM_LOG(W, "Checked in %s", lunch_data.student_id);
+    receive_lunch_data(lunch_data, ind->rssi);
 }
 
 static void gap_init_cfm(ble_err_code_t status)
