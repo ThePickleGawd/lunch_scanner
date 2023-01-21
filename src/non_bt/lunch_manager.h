@@ -20,7 +20,7 @@
 #define STUDENT_ID_ARR_LEN 10
 
 // RSSI Setting
-#define RSSI_THRESHOLD -75
+#define RSSI_THRESHOLD -63
 #define RSSI_PASS_REQUIREMENT 3
 #define RSSI_LEEWAY_MAX 1
 

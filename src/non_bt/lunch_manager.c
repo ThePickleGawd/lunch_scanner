@@ -85,10 +85,17 @@ bool student_is_checked_in(nvds_lunch_data_t data) {
 
 void receive_lunch_data(nvds_lunch_data_t data, int rssi)
 {
+    //ATM_LOG(V, "Receiving ID: %s with RSSI: %d", data.student_id, rssi);
+    char str[] = "=================== ";
+    int idx = (int) (19 *((double)90+rssi)/60);
+    for(int i = idx; i < 20; i++) str[i] = '-'; 
+    str[20] = 0;
+    ATM_LOG(V, "%s (%d)", str, rssi);
+    
+    // TODO: replace str[i] with space if signal indicates it
+
     if(student_is_checked_in(data)) return;
     
-    ATM_LOG(V, "Receiving ID: %s with RSSI: %d", data.student_id, rssi);
-
     khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
     if (k == kh_end(rssi_map)) {
         // Don't create entry if rssi does not pass threshold
