@@ -20,9 +20,9 @@
 #define STUDENT_ID_ARR_LEN 10
 
 // RSSI Setting
-#define RSSI_THRESHOLD -63
+#define RSSI_THRESHOLD -69
 #define RSSI_PASS_REQUIREMENT 3
-#define RSSI_LEEWAY_MAX 1
+#define RSSI_LEEWAY_MAX 0
 
 /**
  * @brief NVDS Lunch Data Type

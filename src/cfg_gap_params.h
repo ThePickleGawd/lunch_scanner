@@ -74,12 +74,12 @@ COPIED FROM BLE_adv_scan!!!
 // <o> 1M PHY Scan interval (uint: us)
 // <i> 1M PHY Scan interval (uint: us)
 // <2500-10240000>
-#define SCAN0_1M_INTERVAL 100000
+#define SCAN0_1M_INTERVAL 10000 // Original 100000
 
 // <o> 1M PHY Scan window (uint: us)
 // <i> 1M PHY Scan window (uint: us)
 // <2500-10240000>
-#define SCAN0_1M_WINDOWS 100000
+#define SCAN0_1M_WINDOWS 10000 // Original 100000
 
 // <o> Coded PHY Scan interval (uint: us)
 // <i> Coded PHY Scan interval (uint: us)
