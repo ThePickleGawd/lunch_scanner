@@ -181,6 +181,13 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
         return;
     }
 
+    // ========= TEMP CODE FOR LUNCH PERIPHERAL =========== //
+    if(lunch_data.school_id[0] == 0xFF) {
+        ATM_LOG(D, "Recieve special lunch packet!!!");
+        receive_special_lunch_data(lunch_data, -(0xFF - lunch_data.school_id[1]));
+    }
+    // =================== END TMP CODE =================== //
+
     receive_lunch_data(lunch_data, ind->rssi);
 }
 

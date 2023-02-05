@@ -83,6 +83,14 @@ bool student_is_checked_in(nvds_lunch_data_t data) {
     return !(k == kh_end(check_in_set));
 }
 
+void receive_special_lunch_data(nvds_lunch_data_t data, int rssi)
+{
+    if(student_is_checked_in(data)) return;
+
+    ATM_LOG(D, "Checking in student with special lunch packet (rssi = %d", (rssi));
+    check_in_student(data);
+}
+
 void receive_lunch_data(nvds_lunch_data_t data, int rssi)
 {
     //ATM_LOG(V, "Receiving ID: %s with RSSI: %d", data.student_id, rssi);

@@ -51,3 +51,9 @@ bool student_is_checked_in(nvds_lunch_data_t data);
  * @brief Send lunch data to lunch_manager
  */
 void receive_lunch_data(nvds_lunch_data_t data, int rssi);
+
+/**
+ * @brief Temporary code: receive special beacon
+ */
+void receive_special_lunch_data(nvds_lunch_data_t data, int rssi)
+
