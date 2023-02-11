@@ -20,7 +20,7 @@
 #define STUDENT_ID_ARR_LEN 10
 
 // RSSI Setting
-#define RSSI_THRESHOLD -69
+#define RSSI_THRESHOLD -60
 #define RSSI_PASS_REQUIREMENT 3
 #define RSSI_LEEWAY_MAX 0
 
@@ -55,5 +55,5 @@ void receive_lunch_data(nvds_lunch_data_t data, int rssi);
 /**
  * @brief Temporary code: receive special beacon
  */
-void receive_special_lunch_data(nvds_lunch_data_t data, int rssi)
+void receive_special_lunch_data(nvds_lunch_data_t data, int rssi);
 

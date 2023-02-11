@@ -86,8 +86,9 @@ bool student_is_checked_in(nvds_lunch_data_t data) {
 void receive_special_lunch_data(nvds_lunch_data_t data, int rssi)
 {
     if(student_is_checked_in(data)) return;
-
-    ATM_LOG(D, "Checking in student with special lunch packet (rssi = %d", (rssi));
+    if(rssi < RSSI_THRESHOLD) return;
+    
+    ATM_LOG(D, "Checking in student with special lunch packet (rssi = %d)", (rssi));
     check_in_student(data);
 }
 

@@ -35,7 +35,7 @@
 #include "lunch_hogp.h"
 #include "lunch_gap.h"
 
-ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
+ATM_LOG_LOCAL_SETTING("lunch_scanner", V);
 
 /*
  * FUNCTION DECLARATIONS
