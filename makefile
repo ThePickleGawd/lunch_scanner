@@ -9,6 +9,7 @@ DRIVERS := \
 	sw_timer \
 	sw_event \
 	timer \
+	atm_gpio
 
 LIBRARIES := prf
 PROFILES := DISS HOGPD

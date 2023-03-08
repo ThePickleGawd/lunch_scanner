@@ -20,9 +20,9 @@
 #define STUDENT_ID_ARR_LEN 10
 
 // RSSI Setting
-#define RSSI_THRESHOLD -60
-#define RSSI_PASS_REQUIREMENT 3
-#define RSSI_LEEWAY_MAX 0
+#define RSSI_THRESHOLD -58
+#define RSSI_ARRAY_SIZE 4
+#define RSSI_ARRAY_TOTAL_THRESHOLD (RSSI_THRESHOLD * RSSI_ARRAY_SIZE)
 
 /**
  * @brief NVDS Lunch Data Type
@@ -32,13 +32,21 @@ typedef struct {
     uint8_t school_id[SCHOOL_ID_ARR_LEN];
     uint8_t student_id[STUDENT_ID_ARR_LEN];
 } __PACKED nvds_lunch_data_t;
+
+typedef struct {
+    int8_t rssi_val;
+    uint8_t student_id[STUDENT_ID_ARR_LEN];
+} __PACKED lunch_peripheral_data_t;
+
 /**
- * @brief RSSI Array Type
- * @note Values at index greater than size can be anything, but it doesn't matter
+ * @brief RSSI Profile struct
+ * @note Sliding average approach by cycling through array
  */
 typedef struct {
-    int pass_cnt;
-    int leeway;
+    int rssi_values[RSSI_ARRAY_SIZE]; // Array of recent rssi values
+    int index; // Index of the previously placed rssi value
+    int total; // Sum of rssi values
+    bool is_full; // True if the array is full
 } rssi_profile_t;
 
 /**
@@ -50,10 +58,10 @@ bool student_is_checked_in(nvds_lunch_data_t data);
 /**
  * @brief Send lunch data to lunch_manager
  */
-void receive_lunch_data(nvds_lunch_data_t data, int rssi);
+void receive_lunch_data(nvds_lunch_data_t data, int8_t rssi_val);
 
 /**
  * @brief Temporary code: receive special beacon
  */
-void receive_special_lunch_data(nvds_lunch_data_t data, int rssi);
+void receive_special_lunch_data(nvds_lunch_data_t data, int8_t rssi_val);
 

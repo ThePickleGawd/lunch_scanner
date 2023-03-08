@@ -14,11 +14,17 @@
 
 #include "lunch_manager.h"
 
+typedef enum {
+    PARSE_LUNCH_SUCCESS,
+    PARSE_MAN_SUCCESS,
+    PARSE_ERROR,
+} lunch_parser_err_t;
+
 /**
  * @brief Try to parse lunch data from advertisement data
- * @returns true on success, false otherwise
+ * @returns lunch_parser_err_t
 */
-bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out);
+lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out);
 
 /**
  * @brief Prints out formatted bluetooth address
