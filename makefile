@@ -66,6 +66,7 @@ C_SRCS += \
 	$(SRC_NON_BT)/lunch_parser.c \
 	$(SRC_NON_BT)/lunch_manager.c \
 	$(SRC_NON_BT)/lunch_helper.c \
+	$(SRC_NON_BT)/lunch_pair_button.c \
 	$(SRC_BT)/lunch_gap.c \
 	$(SRC_BT)/lunch_hogp.c \
 

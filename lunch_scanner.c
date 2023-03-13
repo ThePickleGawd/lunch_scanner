@@ -35,6 +35,7 @@
 #include "lunch_manager.h"
 #include "lunch_hogp.h"
 #include "lunch_gap.h"
+#include "lunch_pair_button.h"
 
 ATM_LOG_LOCAL_SETTING("lunch_scanner", V);
 
@@ -105,6 +106,9 @@ static void lunch_s_init(void)
     atm_gpio_clear_input(LUNCH_MODE_DIP);
 
     ATM_LOG(D, "Initing in %s mode (doesn't do anything now: todo fix)", is_perif ? "perif " : "regular");
+
+    // Setup pair button
+    lunch_pair_button_init(lunch_gap_remove_current_bond);
 
     // Register Profiles
     atm_gap_prf_reg(BLE_HOGPD_MODULE_NAME, lunch_hogp_param());
