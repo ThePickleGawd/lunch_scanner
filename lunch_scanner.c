@@ -26,6 +26,7 @@
 #include "atm_co_utils.h"
 #include "ble_hogpd.h"
 #include "app_diss.h"
+#include "atm_gpio.h"
 
 // My stuff
 #include "app_config.h"
@@ -35,7 +36,7 @@
 #include "lunch_hogp.h"
 #include "lunch_gap.h"
 
-ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
+ATM_LOG_LOCAL_SETTING("lunch_scanner", V);
 
 /*
  * FUNCTION DECLARATIONS
@@ -47,6 +48,10 @@ ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
  * DEFINES
  *******************************************************************************
  */
+
+#ifndef LUNCH_MODE_DIP
+#define LUNCH_MODE_DIP 9
+#endif
 
 #define S_TBL_IDX 0
 
@@ -60,6 +65,8 @@ ATM_LOG_LOCAL_SETTING("lunch_scanner", D);
  */
 
 static sw_timer_id_t tid_lunch_idle;
+
+bool is_perif = false;
 
 /*
  * STATIC FUNCTIONS
@@ -89,6 +96,16 @@ static void lunch_idle_timer_msg_ind(sw_timer_id_t idx, void const *ctx)
 
 static void lunch_s_init(void) 
 {
+    // Initialize DIP switch for mode
+    atm_gpio_setup(LUNCH_MODE_DIP);
+    atm_gpio_set_input(LUNCH_MODE_DIP);
+    atm_gpio_set_pullup(LUNCH_MODE_DIP);
+    is_perif = atm_gpio_read_gpio(LUNCH_MODE_DIP);
+    atm_gpio_clear_pullup(LUNCH_MODE_DIP);
+    atm_gpio_clear_input(LUNCH_MODE_DIP);
+
+    ATM_LOG(D, "Initing in %s mode (doesn't do anything now: todo fix)", is_perif ? "perif " : "regular");
+
     // Register Profiles
     atm_gap_prf_reg(BLE_HOGPD_MODULE_NAME, lunch_hogp_param());
     atm_gap_prf_reg(BLE_DISS_MODULE_NAME, app_dis_param());

@@ -48,7 +48,7 @@ struct consumer_report_s {
 #define HID_CONSUMER_REPORT_ID 2
 
 // Number of reports that can be sent
-#define HID_NB_SEND_REPORT (30)
+#define HID_NB_SEND_REPORT (100)
 
 static uint8_t const hid_keyboard_report_map[] = {
     /** INPUT

@@ -16,6 +16,7 @@
 
 // My Stuff
 #include "lunch_parser.h"
+#include "lunch_manager.h"
 
 ATM_LOG_LOCAL_SETTING("lunch_parser", D);
 
@@ -24,15 +25,24 @@ ATM_LOG_LOCAL_SETTING("lunch_parser", D);
  *******************************************************************************
  */
 
+// ADV packet offset
 #define LEN_OFFSET 0
 #define TYPE_OFFSET 1
 #define DATA_OFFSET 2
 
-#define COMPLETE_SERVICE_LIST 0x03
-#define SERVICE_DATA 0x2a
-
+// Lunch packet
 #define SCHOOL_ID_LEN 6
 #define STUDENT_ID_LEN 10
+
+// Lunch Periph
+#define PERIPH_CNT_OFFSET 2
+#define PERIPH_START_OFFSET 3
+#define PERIPH_NEXT_OFFSET (STUDENT_ID_ARR_LEN+1)
+
+// Types
+#define COMPLETE_SERVICE_LIST 0x03
+#define SERVICE_DATA 0x2a
+#define MANUFACTURER_DATA 0xff
 
 static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
 
@@ -51,7 +61,7 @@ static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
     '9', '5', '0', '3', '0', '4', '8', '6', 0x00, 0x00
 */
 
-bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out)
+lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out)
 {
     ATM_LOG(V, "%s", __func__);
 
@@ -66,10 +76,10 @@ bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* 
 
         if(cur_len == 0) {
             ATM_LOG(W, "Invalid Data Packet");
-            return false;
+            return PARSE_ERROR;
         }
 
-        // Check if this is the service data
+        // Check if this is the service data (regular LunchTrak Beacon)
         if(cur_type == SERVICE_DATA) {
             
             // Copy the service data into a new array
@@ -82,14 +92,32 @@ bool try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* 
 
                 ATM_LOG(V, "Reading School ID: %s", out->school_id);
                 ATM_LOG(V, "Reading Student ID: %s", out->student_id);
+
+                return PARSE_LUNCH_SUCCESS;
             }
+        }
+
+        // Check if this is manufacturer data (lunch_periph data)
+        if(cur_type == MANUFACTURER_DATA) {
+            int cnt = data[idx + PERIPH_CNT_OFFSET];
+
+            for(int i = 0; i < cnt; i++) {
+                int periph_idx = idx + PERIPH_START_OFFSET + (i * PERIPH_NEXT_OFFSET);
+                int8_t rssi = data[periph_idx];
+                nvds_lunch_data_t lunch_data = {0};
+                memcpy(&lunch_data.student_id, &data[periph_idx + 1], STUDENT_ID_LEN);
+
+                receive_special_lunch_data(lunch_data, rssi);
+            }
+
+            return PARSE_MAN_SUCCESS;
         }
 
         // Move idx to next data field
         idx += cur_len + 1;
     }
 
-    return true;
+    return PARSE_ERROR;
 }
 
 void print_bd_addr(const uint8_t addr[]) {
