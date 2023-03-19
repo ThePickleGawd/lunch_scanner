@@ -14,8 +14,9 @@
 
 // GAP configuration
 
-// Appearance Icon <0x0-0xFFFF>
-#define CFG_GAP_APPEARANCE 961
+// Appearance
+#define CFG_GAP_DEV_NAME "LunchTrak Scanner"
+#define CFG_GAP_APPEARANCE ATM_GAP_APPEARANCE_BARCODE_SCANNER
 // Pairing Mode
 #define CFG_GAP_PAIRING_MODE  (BLE_GAP_PAIRING_SEC_CON | BLE_GAP_PAIRING_LEGACY)
 // Connection interval
