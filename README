@@ -1,69 +1,9 @@
+## Lunch Scanner
 
-The BLE_adv_scan is a flash-based application and it will send direct
-advertisements with High Duty Cycle or Low Duty Cycle based on NVDS setting,
-then do scan to check if direct peer device receive the advertisement and
-responds back with it's own advertisement. This example can be used with
-BLE_scan_adv, WURX_adv and WURX_scan_adv examples as pair.
+Scans student ID numbers and "types" them into a computer using BLE HID.
 
-This example can search a group of devices with sequential addresses starting
-from the peer address in the setting of direct advertisement by using
-NUM_FOUND=X in make command.
-e.g.
-    NUM_FOUND=3, 7c:69:6b:11:11:c9 (peer addr)
-    [idx] [search target address]
-    [ 0 ] [  7c:69:6b:11:11:c9  ] (base_addr)
-    [ 1 ] [  7c:69:6b:11:11:ca  ] (base_addr[0]+1)
-    [ 2 ] [  7c:69:6b:11:11:cb  ] (base_addr[0]+2)
-
-The default searching method searches the target address one by one. It only
-switches to next address when the current target address has been found. The
-default method can be changed to round robin schduling by using ROUND_ROBIN=1
-in make command. It will switch to next target address on every time to search.
-
-Please follow the examples/README "Board configuration" section for your Board
-information as chip while invoking make.
-
-===============================================================================
-To build and download: (default: NUM_FOUND=1, ADV=HDC)
-make BOARD=<chip> run_all
-
-===============================================================================
-Enable High Duty Cycle Direct Beacon, steps are:
-
-1. The first direct peer device address is set
- at 06-APP_BLE_ACT_CRT_CMD/dir_hdc as following:
-
- # adv_param.peer_addr.
- c9 11 11 6b 69 7c	#   addr
-
-2. To set num of peer device to search, type NUM_FOUND=X in make command.
- e.g.
-    make BOARD=<chip> run_all NUM_FOUND=2
-
-3. To search peer device one by one or Round Robin
-  [one by one ] make BOARD=<chip> run_all
-  [Round Robin] make BOARD=<chip> run_all ROUND_ROBIN=1
-
-4. Select High Duty Direct Beacon setting
-   make BOARD=<chip> run_all ADV=HDC
-
-===============================================================================
-Enable Low Duty Cycle Direct Beacon, steps are:
-
-1. The first direct peer device address is set
- at 06-APP_BLE_ACT_CRT_CMD/dir_ldc as following:
-
- # adv_param.peer_addr.
- c9 11 11 6b 69 7c	#   addr
-
-2. To set num of peer device to search, type NUM_FOUND=X in make command.
- e.g.
-    make BOARD=<chip> run_all NUM_FOUND=2
-
-3. To search peer device one by one or Round Robin
-  [one by one ] make BOARD=<chip> run_all
-  [Round Robin] make BOARD=<chip> run_all ROUND_ROBIN=1
-
-4. Select Low Duty Direct Beacon setting
-   make BOARD=<chip> run_all ADV=LDC
-
+```mermaid
+graph TD
+    A[Test] --> B(test)
+    B --> C(decide)
+```
