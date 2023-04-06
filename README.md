@@ -1,9 +1,9 @@
 ## Lunch Scanner
 
-Scans student ID numbers and "types" them into a computer using BLE HID.
+Scans LunchTrak tags that pass by and will "type" the student ID number into the computer using BLE HID.
 
-```mermaid
-graph TD
-    A[Test] --> B(test)
-    B --> C(decide)
-```
+### To Pair
+
+1. Go to Bluetooth settings on PC/Mac/Linux and "Add a Bluetooth Device".
+2. Power on scanner. If already paired, hold the PAIR button (P10) for 3 seconds to reset pairing info
+3. Look for and pair "LunchTrak Scanner". It may also appear as a generic "Keyboard" on some devices.
