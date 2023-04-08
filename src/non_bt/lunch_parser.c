@@ -34,10 +34,35 @@ ATM_LOG_LOCAL_SETTING("lunch_parser", D);
 #define SCHOOL_ID_LEN 6
 #define STUDENT_ID_LEN 10
 
+/*  Example packet from lunch beacon
+0x03, 0x03, 0xf5, 0x2a       // Complete service list: 0x2af5 = fixed string 16
+0x13, 0x2a, 0xf5, 0x2a
+Service Data
+First 6 bytes of SHA-1 Hash of school name (GUNN)
+0xb4, 0xb8, 0x85, 0xe7, 0x11, 0x79
+10 byte Student ID in ascii (pad with 0x00)
+'9', '5', '0', '3', '0', '4', '8', '6', 0x00, 0x00
+*/
+
 // Lunch Periph
-#define PERIPH_CNT_OFFSET 2
-#define PERIPH_START_OFFSET 3
-#define PERIPH_NEXT_OFFSET (STUDENT_ID_ARR_LEN+1)
+#define PREFIX_ID '9', '5', '0'
+#define PREFIX_LEN 3
+
+#define PREIPH_MODE_OFFSET 1
+#define PERIPH_NEEDS_PREFIX_OFFSET 2
+#define PERIPH_CNT_OFFSET 3
+#define PERIPH_START_OFFSET 4
+#define PERIPH_NEXT_OFFSET(needs_prefix) \
+    (needs_prefix ? (STUDENT_ID_ARR_LEN + 1 - PREFIX_LEN) : (STUDENT_ID_ARR_LEN+1))
+
+
+/* Example packet from peripheral
+#define CFG_ADV0_DATA_ADV_PAYLOAD \
+   0x1C, 0xFF, DEFUALT_PERIPH_MODE, NEEDS_PREFIX, PAYLOAD_RSSI_CNT, \
+   -80, '0', '0', '0', '0', '0', '0', 0, \
+   -80, '0', '0', '0', '0', '0', '0', 0, \
+   -80, '0', '0', '0', '0', '0', '0', 0, \
+*/
 
 // Types
 #define COMPLETE_SERVICE_LIST 0x03
@@ -50,16 +75,6 @@ static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
  * STATIC FUNCTIONS
  *******************************************************************************
  */
-
-/*  Complete service list: 0x2af5 = fixed string 16
-    0x03, 0x03, 0xf5, 0x2a
-    Service Data
-    0x13, 0x2a, 0xf5, 0x2a
-    First 6 bytes of SHA-1 Hash of school name (GUNN)
-    0xb4, 0xb8, 0x85, 0xe7, 0x11, 0x79
-    10 byte Student ID in ascii (pad with 0x00)
-    '9', '5', '0', '3', '0', '4', '8', '6', 0x00, 0x00
-*/
 
 lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out)
 {
@@ -100,11 +115,15 @@ lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_
         // Check if this is manufacturer data (lunch_periph data)
         if(cur_type == MANUFACTURER_DATA) {
             int cnt = data[idx + PERIPH_CNT_OFFSET];
+            bool needs_prefix = data[idx + PERIPH_NEEDS_PREFIX_OFFSET];
 
             for(int i = 0; i < cnt; i++) {
-                int periph_idx = idx + PERIPH_START_OFFSET + (i * PERIPH_NEXT_OFFSET);
+                int periph_idx = idx + PERIPH_START_OFFSET + (i * PERIPH_NEXT_OFFSET(needs_prefix));
                 int8_t rssi = data[periph_idx];
+
                 nvds_lunch_data_t lunch_data = {0};
+
+
                 memcpy(&lunch_data.student_id, &data[periph_idx + 1], STUDENT_ID_LEN);
 
                 receive_special_lunch_data(lunch_data, rssi);
