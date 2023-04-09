@@ -45,7 +45,7 @@ First 6 bytes of SHA-1 Hash of school name (GUNN)
 */
 
 // Lunch Periph
-#define PREFIX_ID '9', '5', '0'
+static uint8_t PREFIX_ID[3] = {'9', '5', '0'};
 #define PREFIX_LEN 3
 
 #define PREIPH_MODE_OFFSET 1
@@ -121,10 +121,14 @@ lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_
                 int periph_idx = idx + PERIPH_START_OFFSET + (i * PERIPH_NEXT_OFFSET(needs_prefix));
                 int8_t rssi = data[periph_idx];
 
+                // Populate lunch data; add prefix (950) if needed
                 nvds_lunch_data_t lunch_data = {0};
-
-
-                memcpy(&lunch_data.student_id, &data[periph_idx + 1], STUDENT_ID_LEN);
+                if(needs_prefix) {
+                    for(int i = 0; i < PREFIX_LEN; i++) lunch_data.student_id[i] = PREFIX_ID[i];
+                    memcpy(&lunch_data.student_id + PREFIX_LEN, &data[periph_idx + 1], STUDENT_ID_LEN - PREFIX_LEN);
+                } else {
+                    memcpy(&lunch_data.student_id, &data[periph_idx + 1], STUDENT_ID_LEN);
+                }
 
                 receive_special_lunch_data(lunch_data, rssi);
             }

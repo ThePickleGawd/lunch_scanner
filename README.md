@@ -74,6 +74,7 @@ stateDiagram
 
 ## TODO:
 
+- IMPORTANT: PARSE LEN IS 10 but should be 8 or 5
 - Work with peripheral scanner
 - Think about state machine and how it might prevent multiple scanning at a time
 - Is there something we can do with the knowledge of time interval for proximity?
