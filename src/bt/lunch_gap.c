@@ -173,15 +173,8 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     print_bd_addr(ind->trans_addr.addr.addr);
     
     // Parse lunch data
-    // Note/TODO: Parse will send to lunch_manager if manufaturer data
-    // otherwise give us control if regular beacon. Kinda messy
-    nvds_lunch_data_t lunch_data = {0};
-    lunch_parser_err_t err = try_parse_lunch_data(ind->data, ind->length, &lunch_data);
-    if(err == PARSE_LUNCH_SUCCESS) {
-        receive_lunch_data(lunch_data, ind->rssi);
-    } else if (err == PARSE_MAN_SUCCESS) {
-        // SUCCESS
-    } else {
+    lunch_parser_err_t err = try_parse_lunch_data(ind);
+    if(err == PARSE_ERROR) {
         ATM_LOG(E, "Error - Could not parse lunch data");
     }
 

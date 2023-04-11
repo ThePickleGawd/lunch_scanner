@@ -12,8 +12,6 @@
 
 #pragma once
 
-#include "lunch_manager.h"
-
 typedef enum {
     PARSE_LUNCH_SUCCESS,
     PARSE_MAN_SUCCESS,
@@ -24,7 +22,7 @@ typedef enum {
  * @brief Try to parse lunch data from advertisement data
  * @returns lunch_parser_err_t
 */
-lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out);
+lunch_parser_err_t try_parse_lunch_data(ble_gap_ind_ext_adv_report_t const *ind);
 
 /**
  * @brief Prints out formatted bluetooth address

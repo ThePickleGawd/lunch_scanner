@@ -13,6 +13,7 @@
 // Drivers
 #include <inttypes.h>
 #include "atm_log.h"
+#include "ble_gap.h"
 
 // My Stuff
 #include "lunch_parser.h"
@@ -31,8 +32,9 @@ ATM_LOG_LOCAL_SETTING("lunch_parser", D);
 #define DATA_OFFSET 2
 
 // Lunch packet
-#define SCHOOL_ID_LEN 6
-#define STUDENT_ID_LEN 10
+#define SCHOOL_ID_ARR_LEN 6
+#define STUDENT_ID_ARR_LEN 10
+#define PAUSD_ID_LEN 8
 
 /*  Example packet from lunch beacon
 0x03, 0x03, 0xf5, 0x2a       // Complete service list: 0x2af5 = fixed string 16
@@ -48,17 +50,21 @@ First 6 bytes of SHA-1 Hash of school name (GUNN)
 static uint8_t PREFIX_ID[3] = {'9', '5', '0'};
 #define PREFIX_LEN 3
 
-#define PREIPH_MODE_OFFSET 1
-#define PERIPH_NEEDS_PREFIX_OFFSET 2
+#define PERIPH_MODE_OFFSET 2
 #define PERIPH_CNT_OFFSET 3
 #define PERIPH_START_OFFSET 4
-#define PERIPH_NEXT_OFFSET(needs_prefix) \
-    (needs_prefix ? (STUDENT_ID_ARR_LEN + 1 - PREFIX_LEN) : (STUDENT_ID_ARR_LEN+1))
+#define PERIPH_NEXT_OFFSET (PAUSD_ID_LEN - PREFIX_LEN + 2) // +2 is the RSSI and the 0 pad
+
+typedef enum {
+    EXTENDER,
+    CALIBRATOR
+} lunch_peripheral_mode_t;
+
 
 
 /* Example packet from peripheral
 #define CFG_ADV0_DATA_ADV_PAYLOAD \
-   0x1C, 0xFF, DEFUALT_PERIPH_MODE, NEEDS_PREFIX, PAYLOAD_RSSI_CNT, \
+   0x1C, 0xFF, DEFAULT_PERIPH_MODE, NEEDS_PREFIX, PAYLOAD_RSSI_CNT, \
    -80, '0', '0', '0', '0', '0', '0', 0, \
    -80, '0', '0', '0', '0', '0', '0', 0, \
    -80, '0', '0', '0', '0', '0', '0', 0, \
@@ -76,16 +82,16 @@ static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
  *******************************************************************************
  */
 
-lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_lunch_data_t* out)
+lunch_parser_err_t try_parse_lunch_data(ble_gap_ind_ext_adv_report_t const *ind)
 {
     ATM_LOG(V, "%s", __func__);
 
     int idx = 0;
 
-    while(idx < len) {
+    while(idx < ind->length) {
         // Find length of field and the flag
-        uint8_t cur_len = data[idx + LEN_OFFSET];
-        uint8_t cur_type = data[idx + TYPE_OFFSET];
+        uint8_t cur_len = ind->data[idx + LEN_OFFSET];
+        uint8_t cur_type = ind->data[idx + TYPE_OFFSET];
 
         ATM_LOG(V, "Len: %d, Type: %02x", cur_len, cur_type);
 
@@ -99,14 +105,19 @@ lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_
             
             // Copy the service data into a new array
             uint8_t buffer[cur_len - TYPE_OFFSET];
-            memcpy(buffer, &data[idx + DATA_OFFSET], cur_len - TYPE_OFFSET);
+            memcpy(buffer, &ind->data[idx + DATA_OFFSET], cur_len - TYPE_OFFSET);
 
+            // TODO: get rid of "magic numbers". 0, 1 is service uuid, 2 is first byte we care about
             if(buffer[0] == 0xf5 && buffer[1] == 0x2a) {
-                memcpy(out->school_id, &buffer[2], SCHOOL_ID_LEN);
-                memcpy(out->student_id, &buffer[2 + SCHOOL_ID_LEN], STUDENT_ID_LEN);
+                nvds_lunch_data_t lunch_data = {0};
 
-                ATM_LOG(V, "Reading School ID: %s", out->school_id);
-                ATM_LOG(V, "Reading Student ID: %s", out->student_id);
+                memcpy(&lunch_data.school_id, &buffer[2], SCHOOL_ID_ARR_LEN);
+                memcpy(&lunch_data.student_id, &buffer[2 + SCHOOL_ID_ARR_LEN], STUDENT_ID_ARR_LEN);
+
+                ATM_LOG(V, "Reading School ID: %s", lunch_data.school_id);
+                ATM_LOG(V, "Reading Student ID: %s", lunch_data.student_id);
+
+                receive_lunch_data(&lunch_data, ind->rssi);
 
                 return PARSE_LUNCH_SUCCESS;
             }
@@ -114,23 +125,20 @@ lunch_parser_err_t try_parse_lunch_data(uint8_t const data[], uint8_t len, nvds_
 
         // Check if this is manufacturer data (lunch_periph data)
         if(cur_type == MANUFACTURER_DATA) {
-            int cnt = data[idx + PERIPH_CNT_OFFSET];
-            bool needs_prefix = data[idx + PERIPH_NEEDS_PREFIX_OFFSET];
+            int cnt = ind->data[idx + PERIPH_CNT_OFFSET];
+            lunch_peripheral_mode_t mode = ind->data[idx + PERIPH_MODE_OFFSET];
 
             for(int i = 0; i < cnt; i++) {
-                int periph_idx = idx + PERIPH_START_OFFSET + (i * PERIPH_NEXT_OFFSET(needs_prefix));
-                int8_t rssi = data[periph_idx];
+                int periph_idx = idx + PERIPH_START_OFFSET + (i * PERIPH_NEXT_OFFSET);
+                int8_t rssi = ind->data[periph_idx];
 
                 // Populate lunch data; add prefix (950) if needed
                 nvds_lunch_data_t lunch_data = {0};
-                if(needs_prefix) {
-                    for(int i = 0; i < PREFIX_LEN; i++) lunch_data.student_id[i] = PREFIX_ID[i];
-                    memcpy(&lunch_data.student_id + PREFIX_LEN, &data[periph_idx + 1], STUDENT_ID_LEN - PREFIX_LEN);
-                } else {
-                    memcpy(&lunch_data.student_id, &data[periph_idx + 1], STUDENT_ID_LEN);
-                }
+                for(int j = 0; j < PREFIX_LEN; j++) lunch_data.student_id[j] = PREFIX_ID[j];
+                memcpy(&lunch_data.student_id[PREFIX_LEN], &ind->data[periph_idx + 1], PAUSD_ID_LEN - PREFIX_LEN);
 
-                receive_special_lunch_data(lunch_data, rssi);
+                if (mode == EXTENDER) receive_extender_lunch_data(&lunch_data, rssi);
+                if (mode == CALIBRATOR) receive_calibrator_lunch_data(&lunch_data, rssi);
             }
 
             return PARSE_MAN_SUCCESS;

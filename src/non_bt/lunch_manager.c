@@ -46,18 +46,18 @@ static khash_t(rssi) *rssi_map;
  *******************************************************************************
  */
 
-static int student_id_to_int(nvds_lunch_data_t data)
+static int student_id_to_int(nvds_lunch_data_t *data)
 {
     int num = 0;
     for(int i = STUDENT_ID_ARR_LEN - 1; i >= 0; i--) {
-        num += data.student_id[i] - '0';
+        num += data->student_id[i] - '0';
         num *= 10;
     }
     
     return num;
 }
 
-static void check_in_student(nvds_lunch_data_t data) {
+static void check_in_student(nvds_lunch_data_t *data) {
     // Place in hash map
     int ret;
     kh_put(check_in, check_in_set, student_id_to_int(data), &ret);
@@ -66,65 +66,114 @@ static void check_in_student(nvds_lunch_data_t data) {
 
     // Send to school lunch software via I2C to FT260
     for(int i = 0; i < STUDENT_ID_ARR_LEN; i++) {
-        if(data.student_id[i] == 0) break;
+        if(data->student_id[i] == 0) break;
 
-        lunch_hogp_send_report(get_key_code(data.student_id[i]), true);
-        lunch_hogp_send_report(get_key_code(data.student_id[i]), false);
+        lunch_hogp_send_report(get_key_code(data->student_id[i]), true);
+        lunch_hogp_send_report(get_key_code(data->student_id[i]), false);
     }
 
     lunch_hogp_send_report(KEY_ENTER, true);
     lunch_hogp_send_report(KEY_ENTER, false);
 
-    ATM_LOG(V, "Checked in %s", data.student_id);
+    ATM_LOG(V, "Checked in %s", data->student_id);
 }
 
-bool student_is_checked_in(nvds_lunch_data_t data) {
+static void create_rssi_student(nvds_lunch_data_t *data, khiter_t k, int8_t rssi_val, int8_t rssi_threshold)
+{
+    // New entry in rssi map
+    int ret;
+    khiter_t iter = kh_put(rssi, rssi_map, student_id_to_int(data), &ret);
+
+    // Place new rssi value in map
+    rssi_profile_t rssi_profile = {
+        .total = rssi_val,
+        .index = 0,
+        .is_full = false,
+        .rssi_threshold = rssi_threshold
+    };
+    rssi_profile.rssi_values[0] = rssi_val;
+
+    kh_value(rssi_map, iter) = rssi_profile;
+}
+
+// Check if an rssi_val passes the rssi_profile threshold
+static bool pass_threshold(rssi_profile_t *rssi_profile, int rssi_val)
+{
+    return rssi_val >= (rssi_profile->rssi_threshold == RSSI_THRESHOLD_UNSET ? RSSI_THRESHOLD_DEFAULT : rssi_profile->rssi_threshold);
+}
+
+bool student_is_checked_in(nvds_lunch_data_t *data) {
     khiter_t k = kh_get(check_in, check_in_set, student_id_to_int(data));
     return !(k == kh_end(check_in_set));
 }
 
-void receive_special_lunch_data(nvds_lunch_data_t data, int8_t rssi_val)
+void receive_extender_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
 {
-    ATM_LOG(D, "Recieving special %s", data.student_id);
+    if(rssi_val == (int8_t) 0xFF) return;
+
+    ATM_LOG(V, "EXTENDER============ (%d) - %s", rssi_val, data->student_id);
 
     if(student_is_checked_in(data)) return;
-    if(rssi_val < RSSI_THRESHOLD) return;
-    
-    ATM_LOG(D, "Checking in student with special lunch packet (rssi = %d)", (rssi_val));
-    check_in_student(data);
+
+    // Get correct rssi threshold based on student ID
+    int8_t rssi_threshold = RSSI_THRESHOLD_DEFAULT;
+    khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
+    if(k != kh_end(rssi_map)) {
+        // Check for RSSI threshold that is set here
+        rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
+        rssi_val = rssi_profile->rssi_threshold;
+    }
+
+    // Check in if they should be
+    if(rssi_val >= rssi_threshold) {
+        ATM_LOG(V, "Pass threshold of %d", rssi_threshold);
+        check_in_student(data);
+    }
 }
 
-void receive_lunch_data(nvds_lunch_data_t data, int8_t rssi_val)
+void receive_calibrator_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
+{
+    if(rssi_val == (int8_t) 0xFF) return;
+
+    ATM_LOG(V, "CALIBRATOR========== (%d) - %s", rssi_val, data->student_id);
+
+    if(student_is_checked_in(data)) return;
+
+    // Initialize new rssi_threshold
+    int8_t rssi_threshold = rssi_val;
+    if(rssi_threshold > RSSI_THRESHOLD_DEFAULT)
+        rssi_threshold = RSSI_THRESHOLD_DEFAULT;
+    
+    khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
+    if(k == kh_end(rssi_map)) {
+        ATM_LOG(V, "Creating new entry in map");
+
+        // Create rssi entry with dummy rssi and new threshold
+        create_rssi_student(data, k, RSSI_VAL_UNSET, rssi_threshold);
+    } else {
+        // Set rssi_threshold to new value if new is more
+        rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
+        if(rssi_threshold > rssi_profile->rssi_threshold) {
+            rssi_profile->rssi_threshold = rssi_threshold;
+            ATM_LOG(V, "Setting threshold to %d", rssi_threshold);
+        }
+    }
+}
+
+void receive_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
 {
     //ATM_LOG(V, "Receiving ID: %s with RSSI: %d", data.student_id, rssi);
     char str[] = "=================== ";
     int idx = (int) (19 *((double)90+rssi_val)/60);
     for(int i = idx; i < 20; i++) str[i] = '-'; 
     str[20] = 0;
-    ATM_LOG(V, "%s (%d)", str, rssi_val);
-    
-    // TODO: replace str[i] with space if signal indicates it
+    ATM_LOG(V, "%s (%d) - %s", str, rssi_val, data->student_id);
 
     if(student_is_checked_in(data)) return;
     
     khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
     if (k == kh_end(rssi_map)) {
-        // Don't create entry if rssi does not pass threshold
-        if(rssi_val < RSSI_THRESHOLD) return;
-
-        // New entry in rssi map
-        int ret;
-        khiter_t iter = kh_put(rssi, rssi_map, student_id_to_int(data), &ret);
-
-        // Place new rssi value in map
-        rssi_profile_t rssi_profile = {
-            .total = rssi_val,
-            .index = 0,
-            .is_full = false
-        };
-        rssi_profile.rssi_values[0] = rssi_val;
-
-        kh_value(rssi_map, iter) = rssi_profile;
+        create_rssi_student(data, k, rssi_val, RSSI_THRESHOLD_UNSET);
     } else {
         // RSSI profile already in map
         rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
@@ -149,15 +198,15 @@ void receive_lunch_data(nvds_lunch_data_t data, int8_t rssi_val)
             rssi_profile->total += rssi_val;
 
             // Check in student if total is above array threshold
-            if(rssi_profile->total >= RSSI_ARRAY_TOTAL_THRESHOLD) {
+            if(pass_threshold(rssi_profile, rssi_profile->total / RSSI_ARRAY_SIZE)) {
                 check_in_student(data);
                 kh_del(rssi, rssi_map, k);
             }
         }
         
 
-        ATM_LOG(D, "RSSI Profile total: %d, idx = %d full = %s arr = [%d, %d, %d, %d, %d]",
-            rssi_profile->total, rssi_profile->index, rssi_profile->is_full ? "yes" : "no",
+        ATM_LOG(V, "RSSI Profile Average: %d, idx = %d full = %s arr = [%d, %d, %d, %d, %d]",
+            rssi_profile->total / RSSI_ARRAY_SIZE, rssi_profile->index, rssi_profile->is_full ? "yes" : "no",
             rssi_profile->rssi_values[0], rssi_profile->rssi_values[1], rssi_profile->rssi_values[2], rssi_profile->rssi_values[3], rssi_profile->rssi_values[4]);
 
         rssi_profile->index = next_index;
