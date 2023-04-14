@@ -99,7 +99,7 @@ static void create_rssi_student(nvds_lunch_data_t *data, khiter_t k, int8_t rssi
 // Check if an rssi_val passes the rssi_profile threshold
 static bool pass_threshold(rssi_profile_t *rssi_profile, int rssi_val)
 {
-    return rssi_val >= (rssi_profile->rssi_threshold == RSSI_THRESHOLD_UNSET ? RSSI_THRESHOLD_DEFAULT : rssi_profile->rssi_threshold);
+    return rssi_val >= (rssi_profile->rssi_threshold == RSSI_THRESHOLD_UNSET ? RSSI_THRESHOLD_DEFAULT : rssi_profile->rssi_threshold - RSSI_CALIBRATED_BUFFER);
 }
 
 bool student_is_checked_in(nvds_lunch_data_t *data) {
@@ -122,12 +122,13 @@ void receive_extender_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
         // Check for RSSI threshold that is set here
         rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
         rssi_val = rssi_profile->rssi_threshold;
-    }
 
-    // Check in if they should be
-    if(rssi_val >= rssi_threshold) {
-        ATM_LOG(V, "Pass threshold of %d", rssi_threshold);
-        check_in_student(data);
+        if(pass_threshold(rssi_profile, rssi_val)) {
+            ATM_LOG(V, "Pass threshold of %d", rssi_threshold);
+            check_in_student(data);
+        }
+    } else {
+        ATM_LOG(W, "Extended scanner adv detected but no corresponding rssi_profile exists");
     }
 }
 
@@ -155,7 +156,7 @@ void receive_calibrator_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
         rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
         if(rssi_threshold > rssi_profile->rssi_threshold) {
             rssi_profile->rssi_threshold = rssi_threshold;
-            ATM_LOG(V, "Setting threshold to %d", rssi_threshold);
+            ATM_LOG(V, "Setting threshold to %d   - %s", rssi_threshold, data->student_id);
         }
     }
 }
@@ -204,10 +205,8 @@ void receive_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
             }
         }
         
-
-        ATM_LOG(V, "RSSI Profile Average: %d, idx = %d full = %s arr = [%d, %d, %d, %d, %d]",
-            rssi_profile->total / RSSI_ARRAY_SIZE, rssi_profile->index, rssi_profile->is_full ? "yes" : "no",
-            rssi_profile->rssi_values[0], rssi_profile->rssi_values[1], rssi_profile->rssi_values[2], rssi_profile->rssi_values[3], rssi_profile->rssi_values[4]);
+        ATM_LOG(V, "RSSI Profile Average: %d  - %s",
+            rssi_profile->total / RSSI_ARRAY_SIZE, data->student_id);
 
         rssi_profile->index = next_index;
     }

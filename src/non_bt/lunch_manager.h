@@ -20,7 +20,8 @@
 #define STUDENT_ID_ARR_LEN 10
 
 // RSSI Setting
-#define RSSI_THRESHOLD_DEFAULT -58
+#define RSSI_THRESHOLD_DEFAULT -55
+#define RSSI_CALIBRATED_BUFFER 2 // A safety buffer for calibrated rssi thresholds
 #define RSSI_ARRAY_SIZE 4
 #define RSSI_THRESHOLD_UNSET -128
 #define RSSI_VAL_UNSET -128
