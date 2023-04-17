@@ -61,7 +61,6 @@ typedef enum {
 } lunch_peripheral_mode_t;
 
 
-
 /* Example packet from peripheral
 #define CFG_ADV0_DATA_ADV_PAYLOAD \
    0x1C, 0xFF, DEFAULT_PERIPH_MODE, NEEDS_PREFIX, PAYLOAD_RSSI_CNT, \
@@ -74,8 +73,6 @@ typedef enum {
 #define COMPLETE_SERVICE_LIST 0x03
 #define SERVICE_DATA 0x2a
 #define MANUFACTURER_DATA 0xff
-
-static uint8_t vendor_id[3] = {0x7c, 0x69, 0x6b};
 
 /*
  * STATIC FUNCTIONS
@@ -153,9 +150,4 @@ lunch_parser_err_t try_parse_lunch_data(ble_gap_ind_ext_adv_report_t const *ind)
 
 void print_bd_addr(const uint8_t addr[]) {
     ATM_LOG(V, "%x:%x:%x:%x:%x:%x", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
-}
-
-bool matches_bd_vendor(const uint8_t addr[]) {
-    // ADDR is in LSB order
-    return addr[5] == vendor_id[0] && addr[4] == vendor_id[1] && addr[3] == vendor_id[2];
 }

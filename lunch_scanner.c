@@ -52,10 +52,6 @@ ATM_LOG_LOCAL_SETTING("lunch_scanner", V);
 
 #define S_TBL_IDX 0
 
-#ifndef NVDS_TAG_ADV_DURATION
-#define NVDS_TAG_ADV_DURATION 0xA3
-#endif
-
 /*
  * VARIABLES
  *******************************************************************************

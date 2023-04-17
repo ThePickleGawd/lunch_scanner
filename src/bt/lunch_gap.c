@@ -15,6 +15,7 @@
 #include "ble_gap_sec.h"
 
 // My stuff
+#include "lunch.h"
 #include "lunch_scanner.h"
 #include "lunch_parser.h"
 #include "lunch_manager.h"
@@ -167,16 +168,15 @@ static void gap_ext_adv_ind(ble_gap_ind_ext_adv_report_t const *ind)
     // Return if report is not complete
     if(!(ind->info & BLE_GAP_REPORT_INFO_COMPLETE_BIT)) return;
 
-    // Return if vendor address doesn't match
-    if(!matches_bd_vendor(ind->trans_addr.addr.addr)) return;
-
-    print_bd_addr(ind->trans_addr.addr.addr);
-    
-    // Parse lunch data
-    lunch_parser_err_t err = try_parse_lunch_data(ind);
-    if(err == PARSE_ERROR) {
-        ATM_LOG(E, "Error - Could not parse lunch data");
+    // Continue only if we match bd vendor or addr type is rand (lunch_beacons are rand)
+    if(matches_bd_vendor(ind->trans_addr.addr.addr)) {
+        // Parse lunch data
+        lunch_parser_err_t err = try_parse_lunch_data(ind);
+        if(err == PARSE_ERROR) {
+            ATM_LOG(E, "Error - Could not parse lunch data");
+        }
     }
+    
 
 }
 
@@ -446,6 +446,9 @@ static state_entry const gap_s_tbl[] = {
 void lunch_gap_init(void)
 {
     ATM_LOG(V, "%s", __func__);
+    
+    // Assign Random Static ADDR
+    // atm_gap_gen_rand_addr(BLE_GAP_STATIC_ADDR);
 
     // Start GAP
     atm_gap_start(atm_gap_param_get(), &gap_callbacks);

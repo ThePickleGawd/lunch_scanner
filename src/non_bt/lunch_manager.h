@@ -14,31 +14,12 @@
 
 #include <inttypes.h>
 #include "arch.h"
+#include "lunch.h"
 
-// Lunch Data Setting
-#define SCHOOL_ID_ARR_LEN 6
-#define STUDENT_ID_ARR_LEN 10
-
-// RSSI Setting
-#define RSSI_THRESHOLD_DEFAULT -55
-#define RSSI_CALIBRATED_BUFFER 2 // A safety buffer for calibrated rssi thresholds
-#define RSSI_ARRAY_SIZE 4
+// RSSI Array
+#define RSSI_ARRAY_SIZE 3
 #define RSSI_THRESHOLD_UNSET -128
 #define RSSI_VAL_UNSET -128
-
-/**
- * @brief NVDS Lunch Data Type
- * @note The last byte for each array will always be 0 so that we can treat it like a string
- */
-typedef struct {
-    uint8_t school_id[SCHOOL_ID_ARR_LEN];
-    uint8_t student_id[STUDENT_ID_ARR_LEN];
-} __PACKED nvds_lunch_data_t;
-
-typedef struct {
-    int8_t rssi_val;
-    uint8_t student_id[STUDENT_ID_ARR_LEN];
-} __PACKED lunch_peripheral_data_t;
 
 /**
  * @brief RSSI Profile struct

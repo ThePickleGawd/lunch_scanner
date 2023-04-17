@@ -99,7 +99,7 @@ static void create_rssi_student(nvds_lunch_data_t *data, khiter_t k, int8_t rssi
 // Check if an rssi_val passes the rssi_profile threshold
 static bool pass_threshold(rssi_profile_t *rssi_profile, int rssi_val)
 {
-    return rssi_val >= (rssi_profile->rssi_threshold == RSSI_THRESHOLD_UNSET ? RSSI_THRESHOLD_DEFAULT : rssi_profile->rssi_threshold - RSSI_CALIBRATED_BUFFER);
+    return rssi_val >= (rssi_profile->rssi_threshold == RSSI_THRESHOLD_UNSET ? RSSI_THRESHOLD_DEFAULT : rssi_profile->rssi_threshold);
 }
 
 bool student_is_checked_in(nvds_lunch_data_t *data) {
@@ -111,7 +111,7 @@ void receive_extender_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
 {
     if(rssi_val == (int8_t) 0xFF) return;
 
-    ATM_LOG(V, "EXTENDER============ (%d) - %s", rssi_val, data->student_id);
+    ATM_LOG(D, "EXTENDER============ (%d) - %s", rssi_val, data->student_id);
 
     if(student_is_checked_in(data)) return;
 
@@ -121,7 +121,6 @@ void receive_extender_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
     if(k != kh_end(rssi_map)) {
         // Check for RSSI threshold that is set here
         rssi_profile_t *rssi_profile = &kh_value(rssi_map, k);
-        rssi_val = rssi_profile->rssi_threshold;
 
         if(pass_threshold(rssi_profile, rssi_val)) {
             ATM_LOG(V, "Pass threshold of %d", rssi_threshold);
@@ -136,14 +135,17 @@ void receive_calibrator_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
 {
     if(rssi_val == (int8_t) 0xFF) return;
 
-    ATM_LOG(V, "CALIBRATOR========== (%d) - %s", rssi_val, data->student_id);
+    ATM_LOG(D, "CALIBRATOR========== (%d) - %s", rssi_val, data->student_id);
 
     if(student_is_checked_in(data)) return;
 
-    // Initialize new rssi_threshold
+    // Initialize new rssi_threshold in bounds
     int8_t rssi_threshold = rssi_val;
-    if(rssi_threshold > RSSI_THRESHOLD_DEFAULT)
-        rssi_threshold = RSSI_THRESHOLD_DEFAULT;
+    if(rssi_threshold > RSSI_THRESHOLD_MAX)
+        rssi_threshold = RSSI_THRESHOLD_MAX;
+    if(rssi_threshold < RSSI_THRESHOLD_MIN) {
+        rssi_threshold = RSSI_THRESHOLD_MIN;
+    }
     
     khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
     if(k == kh_end(rssi_map)) {
@@ -163,14 +165,14 @@ void receive_calibrator_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
 
 void receive_lunch_data(nvds_lunch_data_t *data, int8_t rssi_val)
 {
-    //ATM_LOG(V, "Receiving ID: %s with RSSI: %d", data.student_id, rssi);
+    if(student_is_checked_in(data)) return;
+
     char str[] = "=================== ";
     int idx = (int) (19 *((double)90+rssi_val)/60);
     for(int i = idx; i < 20; i++) str[i] = '-'; 
     str[20] = 0;
     ATM_LOG(V, "%s (%d) - %s", str, rssi_val, data->student_id);
 
-    if(student_is_checked_in(data)) return;
     
     khiter_t k = kh_get(rssi, rssi_map, student_id_to_int(data));
     if (k == kh_end(rssi_map)) {

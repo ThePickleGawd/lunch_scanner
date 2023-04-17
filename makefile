@@ -9,7 +9,8 @@ DRIVERS := \
 	sw_timer \
 	sw_event \
 	timer \
-	atm_gpio
+	atm_gpio \
+	lunch
 
 LIBRARIES := prf
 PROFILES := DISS HOGPD
@@ -42,6 +43,9 @@ CFLAGS += \
 	-DENABLE_USER_ADV_DATA_SCANRSP \
 	-DCFG_GAP_ADV_MAX_INST=2 \
 	-DCFG_GAP_SCAN_MAX_INST=1 \
+	
+# -DCFG_GAP_PRIVACY_CFG=1 \
+# -DCFG_GAP_PARAM_CONST=0 \
 
 #-DATM_LOG_GLOBAL_LEVEL=ATM_LOG_W_MASK \
 
